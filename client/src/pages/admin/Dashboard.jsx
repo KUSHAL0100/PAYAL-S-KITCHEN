@@ -303,7 +303,7 @@ const AdminDashboard = () => {
     };
 
     const handleCancelSubscription = async (id) => {
-        if (!window.confirm('Are you sure you want to cancel this user\'s subscription?')) return;
+        if (!window.confirm('Are you sure you want to cancel this user\'s subscription?\nThis will process a pro-rata refund if applicable.')) return;
         try {
             const config = { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } };
             await axios.put(`http://localhost:5000/api/subscriptions/${id}/cancel`, {}, config);
@@ -477,18 +477,42 @@ const AdminDashboard = () => {
                                             <dl>
                                                 <dt className="text-sm font-medium text-gray-500 truncate">Total Revenue</dt>
                                                 <dd className="text-2xl font-semibold text-gray-900">
-                                                    ₹{orders.reduce((acc, order) => {
-                                                        // Only count revenue for approved orders (Confirmed, Preparing, Out for Delivery, Delivered)
-                                                        // Cancelled orders contribute 20% (cancellation fee)
-                                                        // Pending orders contribute 0%
-                                                        if (order.status === 'Pending') {
-                                                            return acc;
-                                                        } else if (order.status === 'Cancelled') {
-                                                            return acc + ((order.totalAmount || 0) * 0.20);
-                                                        } else {
-                                                            return acc + (order.totalAmount || 0);
-                                                        }
-                                                    }, 0).toLocaleString()}
+                                                    ₹{(() => {
+                                                        // Calculate order revenue
+                                                        const orderRevenue = orders.reduce((acc, order) => {
+                                                            if (order.status === 'Pending') return acc;
+                                                            const paid = parseFloat(order.totalAmount) || 0;
+                                                            const refund = parseFloat(order.refundAmount) || 0;
+                                                            // Revenue = Amount Paid - Amount Refunded
+                                                            return acc + (paid - refund);
+                                                        }, 0);
+
+                                                        // Plus subscription revenue (all non-refundable now)
+                                                        const subRevenue = subscriptions.reduce((acc, sub) => acc + (parseFloat(sub.amountPaid) || 0), 0);
+
+                                                        return Math.round(orderRevenue + subRevenue).toLocaleString();
+                                                    })()}
+                                                </dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Total Refunds Card */}
+                            <div className="bg-white overflow-hidden shadow rounded-lg">
+                                <div className="p-5">
+                                    <div className="flex items-center">
+                                        <div className="flex-shrink-0">
+                                            <div className="rounded-md bg-red-100 p-3">
+                                                <AlertCircle className="h-6 w-6 text-red-600" />
+                                            </div>
+                                        </div>
+                                        <div className="ml-5 w-0 flex-1">
+                                            <dl>
+                                                <dt className="text-sm font-medium text-gray-500 truncate">Total Refunds (Orders)</dt>
+                                                <dd className="text-2xl font-semibold text-gray-900">
+                                                    ₹{orders.reduce((acc, order) => acc + (parseFloat(order.refundAmount) || 0), 0).toLocaleString()}
                                                 </dd>
                                             </dl>
                                         </div>
@@ -666,6 +690,12 @@ const AdminDashboard = () => {
                                                         <p className="text-xs text-gray-500">
                                                             Payment: {order.paymentStatus}
                                                         </p>
+                                                        {order.status === 'Cancelled' && (
+                                                            <div className="mt-1 text-xs space-y-0.5">
+                                                                <p className="text-red-600 font-medium">Fee: ₹{order.cancellationFee?.toFixed(0)}</p>
+                                                                <p className="text-green-600 font-medium">Refund: ₹{order.refundAmount?.toFixed(0)}</p>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded">

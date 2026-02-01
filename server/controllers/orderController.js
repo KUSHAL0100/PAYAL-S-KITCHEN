@@ -2,6 +2,11 @@ const Order = require('../models/Order');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 
+const instance = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
+
 // @desc    Create new order
 // @route   POST /api/orders
 // @access  Private
@@ -129,14 +134,39 @@ const updateOrderStatus = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id);
 
-        if (order) {
-            order.status = status;
-            const updatedOrder = await order.save();
-            res.json(updatedOrder);
-        } else {
-            res.status(404).json({ message: 'Order not found' });
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
         }
+
+        // If status is being changed to Cancelled (meaning Admin/Employee rejected it)
+        if (status === 'Cancelled' && order.status !== 'Cancelled') {
+            const total = parseFloat(order.totalAmount) || 0;
+
+            // If it's already paid, trigger a full refund (100% since merchant rejected it)
+            if (order.paymentStatus === 'Paid' && order.paymentId) {
+                try {
+                    await instance.payments.refund(order.paymentId, {
+                        amount: Math.round(total * 100),
+                        speed: "optimum"
+                    });
+                    order.refundAmount = total;
+                    order.cancellationFee = 0;
+                } catch (refundErr) {
+                    console.error('Merchant initiated refund failed:', refundErr.message);
+                    // Still mark as cancelled but keep track of error if needed
+                }
+            } else {
+                // Not paid, just cancel
+                order.refundAmount = 0;
+                order.cancellationFee = 0;
+            }
+        }
+
+        order.status = status;
+        const updatedOrder = await order.save();
+        res.json(updatedOrder);
     } catch (error) {
+        console.error('Error updating order status:', error);
         res.status(500).json({ message: 'Server Error' });
     }
 };
@@ -215,7 +245,6 @@ const verifyPayment = async (req, res) => {
 const cancelOrder = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id);
-
         if (!order) {
             return res.status(404).json({ message: 'Order not found' });
         }
@@ -225,33 +254,65 @@ const cancelOrder = async (req, res) => {
             return res.status(401).json({ message: 'Not authorized to cancel this order' });
         }
 
-        // Only allow cancellation for event and single tiffin orders
-        if (order.type !== 'event' && order.type !== 'single') {
-            return res.status(400).json({ message: 'Only event and custom tiffin orders can be cancelled' });
+        if (order.status === 'Cancelled' || order.status === 'Delivered') {
+            return res.status(400).json({ message: 'Cannot cancel this order' });
         }
 
-        // Cannot cancel already cancelled or delivered orders
-        if (order.status === 'Cancelled') {
-            return res.status(400).json({ message: 'Order is already cancelled' });
+        let cancellationFee = 0;
+        let refundAmount = 0;
+        const total = parseFloat(order.totalAmount) || 0;
+
+        // Calculate cancellation fee based on order status
+        if (order.status === 'Pending') {
+            // Pending orders: 0% fee, 100% refund
+            refundAmount = total;
+        } else {
+            // Confirmed orders: Time-based cancellation fees
+            const now = new Date();
+            const deliveryDate = new Date(order.deliveryDate);
+            const diffInHours = (deliveryDate - now) / (1000 * 60 * 60);
+
+            if (order.type === 'event') {
+                // Event orders: 100% fee if < 5 hours, 20% fee otherwise
+                cancellationFee = diffInHours < 5 ? total : total * 0.20;
+            } else if (order.type === 'single') {
+                // Single orders: 100% fee if < 2 hours, 20% fee otherwise
+                cancellationFee = diffInHours < 2 ? total : total * 0.20;
+            } else {
+                // Other types: 20% fee
+                cancellationFee = total * 0.20;
+            }
+            refundAmount = total - cancellationFee;
         }
 
-        if (order.status === 'Delivered') {
-            return res.status(400).json({ message: 'Cannot cancel delivered orders' });
+        // Process refund via Razorpay
+        let refundData = null;
+        let refundError = null;
+
+        if (refundAmount > 0 && order.paymentStatus === 'Paid' && order.paymentId) {
+            try {
+                const refund = await instance.payments.refund(order.paymentId, {
+                    amount: Math.round(refundAmount * 100),
+                    speed: "optimum"
+                });
+                refundData = refund;
+                console.log(`Refund processed: ${refund.id} (₹${refundAmount})`);
+            } catch (error) {
+                console.error(`Refund failed for order ${order._id}:`, error.message);
+                refundError = error.message;
+            }
         }
 
-        // Calculate refund (80% of total amount, 20% cancellation fee)
-        const cancellationFee = order.totalAmount * 0.20;
-        const refundAmount = order.totalAmount * 0.80;
-
-        // Update order status
         order.status = 'Cancelled';
+        order.cancellationFee = cancellationFee;
+        order.refundAmount = refundAmount;
         await order.save();
 
         res.json({
             message: 'Order cancelled successfully',
-            refundAmount: refundAmount,
-            cancellationFee: cancellationFee,
-            order
+            order,
+            refund: refundData,
+            refundError: refundError
         });
 
     } catch (error) {

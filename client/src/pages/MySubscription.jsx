@@ -354,25 +354,69 @@ const MySubscription = () => {
                             </div>
                         </div>
 
-                        {subscription.status === 'Active' && (
-                            <div className="flex flex-wrap gap-3">
-                                <button
-                                    onClick={handleRenew}
-                                    disabled={processingRenew}
-                                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
-                                >
-                                    <RefreshCw className="h-4 w-4 mr-2" />
-                                    {processingRenew ? 'Processing...' : 'Renew Subscription'}
-                                </button>
-                                <button
-                                    onClick={handleCancel}
-                                    className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
-                                >
-                                    <X className="h-4 w-4 mr-2" />
-                                    Cancel Subscription
-                                </button>
+                        {subscription.status === 'Active' ? (
+                            <div className="space-y-6">
+                                {/* Manage Meal Options */}
+                                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                    <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center">
+                                        Manage Meal Option (Partial Cancellation)
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {['both', 'lunch', 'dinner'].map((type) => (
+                                            <button
+                                                key={type}
+                                                disabled={subscription.mealType === type}
+                                                onClick={async () => {
+                                                    if (type === 'both' && subscription.mealType !== 'both') {
+                                                        showNotification('Upgrading to both meals requires additional payment. Please use the upgrade section below.', 'info');
+                                                        return;
+                                                    }
+                                                    if (!window.confirm(`Are you sure you want to switch to ${type.toUpperCase()} only? No refund will be given for the cancelled portion.`)) return;
+
+                                                    try {
+                                                        const config = {
+                                                            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+                                                        };
+                                                        await axios.put('http://localhost:5000/api/subscriptions/change-meal-type', { mealType: type }, config);
+                                                        showNotification(`Switched to ${type.toUpperCase()} meals.`, 'success');
+                                                        fetchSubscriptionData();
+                                                    } catch (err) {
+                                                        showNotification('Failed to update meal type', 'error');
+                                                    }
+                                                }}
+                                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${subscription.mealType === type
+                                                    ? 'bg-orange-600 text-white cursor-default'
+                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                {type === 'both' ? 'Both Meals' : type.charAt(0).toUpperCase() + type.slice(1) + ' Only'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="mt-2 text-xs text-gray-500 italic">
+                                        * You can switch to a single meal option at any time, but no refund is provided for the removed meal portion.
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-wrap gap-3">
+                                    <button
+                                        onClick={handleRenew}
+                                        disabled={processingRenew}
+                                        className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                                    >
+                                        <RefreshCw className="h-4 w-4 mr-2" />
+                                        {processingRenew ? 'Processing...' : 'Renew Subscription'}
+                                    </button>
+                                    <button
+                                        onClick={handleCancel}
+                                        className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
+                                    >
+                                        <X className="h-4 w-4 mr-2" />
+                                        Cancel Subscription
+                                    </button>
+                                </div>
                             </div>
-                        )}
+                        ) : null}
                     </div>
                 </div>
 
@@ -454,9 +498,10 @@ const MySubscription = () => {
                                                             type="radio"
                                                             checked={upgradeMealType === 'both'}
                                                             onChange={() => setUpgradeMealType('both')}
-                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300"
+                                                            disabled={subscription.plan._id === selectedUpgradePlan._id && subscription.mealType === 'both'}
+                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300 disabled:opacity-50"
                                                         />
-                                                        <label htmlFor="upgrade-both" className="ml-3 block text-sm font-medium text-gray-700">
+                                                        <label htmlFor="upgrade-both" className={`ml-3 block text-sm font-medium ${subscription.plan._id === selectedUpgradePlan._id && subscription.mealType === 'both' ? 'text-gray-400' : 'text-gray-700'}`}>
                                                             Both (Lunch + Dinner) - <span className="font-bold">₹{selectedUpgradePlan.price}</span>
                                                         </label>
                                                     </div>
@@ -467,9 +512,13 @@ const MySubscription = () => {
                                                             type="radio"
                                                             checked={upgradeMealType === 'lunch'}
                                                             onChange={() => setUpgradeMealType('lunch')}
-                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300"
+                                                            disabled={
+                                                                subscription.plan._id === selectedUpgradePlan._id &&
+                                                                (subscription.mealType === 'lunch' || subscription.mealType === 'dinner' || subscription.mealType === 'both')
+                                                            }
+                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300 disabled:opacity-50"
                                                         />
-                                                        <label htmlFor="upgrade-lunch" className="ml-3 block text-sm font-medium text-gray-700">
+                                                        <label htmlFor="upgrade-lunch" className={`ml-3 block text-sm font-medium ${subscription.plan._id === selectedUpgradePlan._id && (subscription.mealType === 'lunch' || subscription.mealType === 'dinner' || subscription.mealType === 'both') ? 'text-gray-400' : 'text-gray-700'}`}>
                                                             Lunch Only - <span className="font-bold">₹{selectedUpgradePlan.price * 0.5}</span>
                                                         </label>
                                                     </div>
@@ -480,9 +529,13 @@ const MySubscription = () => {
                                                             type="radio"
                                                             checked={upgradeMealType === 'dinner'}
                                                             onChange={() => setUpgradeMealType('dinner')}
-                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300"
+                                                            disabled={
+                                                                subscription.plan._id === selectedUpgradePlan._id &&
+                                                                (subscription.mealType === 'dinner' || subscription.mealType === 'lunch' || subscription.mealType === 'both')
+                                                            }
+                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300 disabled:opacity-50"
                                                         />
-                                                        <label htmlFor="upgrade-dinner" className="ml-3 block text-sm font-medium text-gray-700">
+                                                        <label htmlFor="upgrade-dinner" className={`ml-3 block text-sm font-medium ${subscription.plan._id === selectedUpgradePlan._id && (subscription.mealType === 'dinner' || subscription.mealType === 'lunch' || subscription.mealType === 'both') ? 'text-gray-400' : 'text-gray-700'}`}>
                                                             Dinner Only - <span className="font-bold">₹{selectedUpgradePlan.price * 0.5}</span>
                                                         </label>
                                                     </div>
@@ -520,18 +573,44 @@ const MySubscription = () => {
                                             </div>
 
                                             {/* Price Summary */}
-                                            <div className="bg-gray-50 p-3 rounded-md mb-4">
+                                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
                                                 <div className="flex justify-between text-sm">
                                                     <span>New Plan Total:</span>
-                                                    <span className="font-semibold">₹{(selectedUpgradePlan.price * (upgradeMealType === 'both' ? 1 : 0.5))}</span>
+                                                    <span className="font-semibold">₹{(selectedUpgradePlan.price * (upgradeMealType === 'both' ? 1 : 0.5)).toFixed(2)}</span>
                                                 </div>
-                                                <div className="flex justify-between text-sm text-green-600">
-                                                    <span>Less Amount Paid:</span>
-                                                    <span>-₹{subscription.amountPaid}</span>
+                                                <div className="flex justify-between text-sm text-green-600 mt-1">
+                                                    <span>Upgrade Credit:</span>
+                                                    <span>- ₹{(() => {
+                                                        if (subscription.plan._id === selectedUpgradePlan._id) {
+                                                            return subscription.amountPaid.toFixed(2);
+                                                        }
+                                                        const now = new Date();
+                                                        const start = new Date(subscription.startDate);
+                                                        const end = new Date(subscription.endDate);
+                                                        const totalDays = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+                                                        const usedDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
+                                                        const remainingDays = Math.max(0, totalDays - usedDays);
+                                                        return Math.floor((subscription.amountPaid / totalDays) * remainingDays).toFixed(2);
+                                                    })()}</span>
                                                 </div>
-                                                <div className="border-t border-gray-200 mt-2 pt-2 flex justify-between font-bold text-lg">
-                                                    <span>Upgrade Cost:</span>
-                                                    <span>₹{Math.max(0, (selectedUpgradePlan.price * (upgradeMealType === 'both' ? 1 : 0.5)) - subscription.amountPaid)}</span>
+                                                <div className="border-t border-gray-300 mt-2 pt-2 flex justify-between font-bold text-lg text-orange-600">
+                                                    <span>Payable Amount:</span>
+                                                    <span>₹{(() => {
+                                                        const newPrice = selectedUpgradePlan.price * (upgradeMealType === 'both' ? 1 : 0.5);
+                                                        let credit = 0;
+                                                        if (subscription.plan._id === selectedUpgradePlan._id) {
+                                                            credit = subscription.amountPaid;
+                                                        } else {
+                                                            const now = new Date();
+                                                            const start = new Date(subscription.startDate);
+                                                            const end = new Date(subscription.endDate);
+                                                            const totalDays = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+                                                            const usedDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
+                                                            const remainingDays = Math.max(0, totalDays - usedDays);
+                                                            credit = Math.floor((subscription.amountPaid / totalDays) * remainingDays);
+                                                        }
+                                                        return Math.max(0, newPrice - credit).toFixed(2);
+                                                    })()}</span>
                                                 </div>
                                             </div>
 

@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import axios from 'axios';
 import { Calendar, ChevronLeft, ChevronRight, Star, X, ShoppingCart } from 'lucide-react';
 import CartContext from '../context/CartContext';
 import NotificationContext from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
+import { validateOrderTime } from '../utils/orderUtils';
 
 const Menu = () => {
     const [selectedPlan, setSelectedPlan] = useState('Basic');
@@ -137,26 +138,23 @@ const Menu = () => {
         }
     }, [orderDate, selectedPlan, isModalOpen]);
 
+    // Calculate total amount using useMemo to avoid duplication
+    const totalOrderAmount = useMemo(() => {
+        const price = PLAN_PRICES[selectedPlan];
+        return (price * orderQuantity) + 100; // 100 Delivery Charge
+    }, [selectedPlan, orderQuantity]);
+
     const handleOrderNow = () => {
         setOrderDate(new Date().toISOString().split('T')[0]); // Reset to today
         setIsModalOpen(true);
     };
 
     const handleAddToCart = () => {
-        // 12-Hour Validation
-        const now = new Date();
-        const targetDate = new Date(orderDate);
+        // Validate order time using utility function
+        const validation = validateOrderTime(orderDate, orderMealTime);
 
-        if (orderMealTime === 'Lunch') {
-            targetDate.setHours(12, 0, 0, 0);
-        } else if (orderMealTime === 'Dinner') {
-            targetDate.setHours(20, 0, 0, 0);
-        }
-
-        const diffInHours = (targetDate - now) / 1000 / 60 / 60;
-
-        if (diffInHours < 12) {
-            showNotification(`Order window closed. Lunch/Dinner must be ordered 12 hours in advance.`, 'error');
+        if (!validation.isValid) {
+            showNotification(validation.errorMessage, 'error');
             return;
         }
 
@@ -167,7 +165,6 @@ const Menu = () => {
         }
 
         const price = PLAN_PRICES[selectedPlan];
-        const totalAmount = (price * orderQuantity) + 100; // 100 Delivery Charge
 
         const orderItem = {
             id: `single_${Date.now()}`, // Unique ID
@@ -178,7 +175,7 @@ const Menu = () => {
             quantity: parseInt(orderQuantity),
             price: price,
             deliveryCharge: 100,
-            totalAmount: totalAmount,
+            totalAmount: totalOrderAmount,
             menuItems: selectedDateMenu.items[orderMealTime.toLowerCase()],
             deliveryDate: orderDate // Pass selected date
         };
@@ -408,21 +405,15 @@ const Menu = () => {
 
                                             {/* 12-Hour Window Warning */}
                                             {(() => {
-                                                const now = new Date();
-                                                const targetDate = new Date(orderDate);
-                                                if (orderMealTime === 'Lunch') targetDate.setHours(12, 0, 0, 0);
-                                                else if (orderMealTime === 'Dinner') targetDate.setHours(20, 0, 0, 0);
+                                                const validation = validateOrderTime(orderDate, orderMealTime);
 
-                                                const diffInHours = (targetDate - now) / 1000 / 60 / 60;
-
-                                                if (diffInHours < 12) {
+                                                if (!validation.isValid) {
                                                     return (
                                                         <div className="bg-red-50 border-l-4 border-red-400 p-4">
                                                             <div className="flex">
                                                                 <div className="ml-3">
                                                                     <p className="text-sm text-red-700">
-                                                                        Order window closed. {orderMealTime} must be ordered 12 hours in advance.
-                                                                        Please select a future date.
+                                                                        {validation.errorMessage}
                                                                     </p>
                                                                 </div>
                                                             </div>
@@ -462,7 +453,7 @@ const Menu = () => {
                                                 </div>
                                                 <div className="border-t border-gray-200 mt-2 pt-2 flex justify-between text-base font-bold">
                                                     <span>Total:</span>
-                                                    <span className="text-orange-600">₹{(PLAN_PRICES[selectedPlan] * orderQuantity) + 100}</span>
+                                                    <span className="text-orange-600">₹{totalOrderAmount}</span>
                                                 </div>
                                             </div>
                                         </div>

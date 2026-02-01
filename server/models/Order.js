@@ -22,6 +22,8 @@ const orderSchema = mongoose.Schema({
     paymentId: { type: String },
     subscription: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription' },
     discountAmount: { type: Number, default: 0 },
+    cancellationFee: { type: Number, default: 0 },
+    refundAmount: { type: Number, default: 0 },
     couponCode: { type: String },
 }, { timestamps: true });
 

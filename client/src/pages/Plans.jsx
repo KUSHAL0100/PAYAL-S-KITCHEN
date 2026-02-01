@@ -4,6 +4,7 @@ import { Check, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
+import { canUpgradeToPlan, MEAL_PRICE_MULTIPLIER } from '../utils/orderUtils';
 
 const Plans = () => {
     const [plans, setPlans] = useState([]);
@@ -69,32 +70,18 @@ const Plans = () => {
             return;
         }
 
-        // Check if user already has this exact subscription
-        if (currentSubscription && currentSubscription.plan._id === plan._id) {
-            showNotification('You already have this subscription active!', 'error');
+        // Use utility function to check upgrade eligibility
+        // Check with 'both' since that's the default when modal opens
+        const { canUpgrade, reason } = canUpgradeToPlan(currentSubscription, plan, 'both');
+
+        if (!canUpgrade) {
+            showNotification(reason, 'error');
             return;
         }
 
-        // Check if user has active subscription and is trying to downgrade
-        if (currentSubscription) {
-            const tierMap = { 'Basic': 1, 'Premium': 2, 'Exotic': 3 };
-            const durationMap = { 'monthly': 1, 'yearly': 2 };
-
-            const currentTier = tierMap[currentSubscription.plan.name] || 0;
-            const newTier = tierMap[plan.name] || 0;
-            const currentDuration = durationMap[currentSubscription.plan.duration] || 0;
-            const newDuration = durationMap[plan.duration] || 0;
-
-            const isHigherTier = newTier > currentTier;
-            const isSameTierLongerDuration = (newTier === currentTier) && (newDuration > currentDuration);
-
-            if (!isHigherTier && !isSameTierLongerDuration) {
-                showNotification('You can only upgrade to a higher tier or longer duration. Use "My Subscription" page to upgrade.', 'error');
-                return;
-            }
-
-            // If valid upgrade, show message
-            showNotification('This is an upgrade! You will be charged the difference.', 'info');
+        // If valid upgrade, show message
+        if (currentSubscription && reason) {
+            showNotification(reason, 'info');
         }
 
         setSelectedPlan(plan);
@@ -194,7 +181,9 @@ const Plans = () => {
         .sort((a, b) => a.price - b.price);
 
     const PlanCard = ({ plan }) => {
-        const isCurrent = currentSubscription && currentSubscription.plan._id === plan._id;
+        const isCurrent = currentSubscription &&
+            currentSubscription.plan._id === plan._id &&
+            (currentSubscription.mealType === 'both' || !currentSubscription.mealType);
 
         return (
             <div key={plan._id} className={`border rounded-lg shadow-sm divide-y divide-gray-200 bg-white flex flex-col hover:shadow-lg transition-shadow duration-300 ${isCurrent ? 'border-orange-500 border-2' : 'border-gray-200'}`}>
@@ -307,10 +296,11 @@ const Plans = () => {
                                                             type="radio"
                                                             checked={mealType === 'both'}
                                                             onChange={() => setMealType('both')}
-                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300"
+                                                            disabled={currentSubscription?.plan?._id === selectedPlan._id && (currentSubscription?.mealType === 'both' || !currentSubscription?.mealType)}
+                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300 disabled:opacity-50"
                                                         />
-                                                        <label htmlFor="both" className="ml-3 block text-sm font-medium text-gray-700">
-                                                            Both (Lunch + Dinner) - <span className="font-bold">₹{selectedPlan.price}</span>
+                                                        <label htmlFor="both" className={`ml-3 block text-sm font-medium ${currentSubscription?.plan?._id === selectedPlan._id && (currentSubscription?.mealType === 'both' || !currentSubscription?.mealType) ? 'text-gray-400' : 'text-gray-700'}`}>
+                                                            Both (Lunch + Dinner) - <span className="font-bold">₹{selectedPlan.price * MEAL_PRICE_MULTIPLIER.BOTH}</span>
                                                         </label>
                                                     </div>
                                                     <div className="flex items-center">
@@ -320,10 +310,14 @@ const Plans = () => {
                                                             type="radio"
                                                             checked={mealType === 'lunch'}
                                                             onChange={() => setMealType('lunch')}
-                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300"
+                                                            disabled={
+                                                                currentSubscription?.plan?._id === selectedPlan._id &&
+                                                                (currentSubscription?.mealType === 'lunch' || currentSubscription?.mealType === 'dinner' || currentSubscription?.mealType === 'both')
+                                                            }
+                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300 disabled:opacity-50"
                                                         />
-                                                        <label htmlFor="lunch" className="ml-3 block text-sm font-medium text-gray-700">
-                                                            Lunch Only - <span className="font-bold">₹{selectedPlan.price * 0.5}</span>
+                                                        <label htmlFor="lunch" className={`ml-3 block text-sm font-medium ${currentSubscription?.plan?._id === selectedPlan._id && (currentSubscription?.mealType === 'lunch' || currentSubscription?.mealType === 'dinner' || currentSubscription?.mealType === 'both') ? 'text-gray-400' : 'text-gray-700'}`}>
+                                                            Lunch Only - <span className="font-bold">₹{selectedPlan.price * MEAL_PRICE_MULTIPLIER.LUNCH_ONLY}</span>
                                                         </label>
                                                     </div>
                                                     <div className="flex items-center">
@@ -333,10 +327,14 @@ const Plans = () => {
                                                             type="radio"
                                                             checked={mealType === 'dinner'}
                                                             onChange={() => setMealType('dinner')}
-                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300"
+                                                            disabled={
+                                                                currentSubscription?.plan?._id === selectedPlan._id &&
+                                                                (currentSubscription?.mealType === 'dinner' || currentSubscription?.mealType === 'lunch' || currentSubscription?.mealType === 'both')
+                                                            }
+                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300 disabled:opacity-50"
                                                         />
-                                                        <label htmlFor="dinner" className="ml-3 block text-sm font-medium text-gray-700">
-                                                            Dinner Only - <span className="font-bold">₹{selectedPlan.price * 0.5}</span>
+                                                        <label htmlFor="dinner" className={`ml-3 block text-sm font-medium ${currentSubscription?.plan?._id === selectedPlan._id && (currentSubscription?.mealType === 'dinner' || currentSubscription?.mealType === 'lunch' || currentSubscription?.mealType === 'both') ? 'text-gray-400' : 'text-gray-700'}`}>
+                                                            Dinner Only - <span className="font-bold">₹{selectedPlan.price * MEAL_PRICE_MULTIPLIER.DINNER_ONLY}</span>
                                                         </label>
                                                     </div>
                                                 </div>
@@ -371,17 +369,69 @@ const Plans = () => {
                                                     </div>
                                                 </div>
                                             </div>
+
+                                            {/* Price Breakdown */}
+                                            <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                                <h4 className="text-sm font-bold text-gray-900 mb-3">Price Breakdown</h4>
+                                                <div className="space-y-2 text-sm">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-600">New Plan Price</span>
+                                                        <span className="font-medium text-gray-900">₹{(selectedPlan.price * MEAL_PRICE_MULTIPLIER[mealType.toUpperCase()]).toFixed(2)}</span>
+                                                    </div>
+
+                                                    {currentSubscription && (
+                                                        <div className="flex justify-between text-green-600 font-medium">
+                                                            <span>Upgrade Credit (Existing Plan)</span>
+                                                            <span>- ₹{(() => {
+                                                                if (currentSubscription.plan._id === selectedPlan._id) {
+                                                                    return currentSubscription.amountPaid.toFixed(2);
+                                                                }
+                                                                const now = new Date();
+                                                                const start = new Date(currentSubscription.startDate);
+                                                                const end = new Date(currentSubscription.endDate);
+                                                                const totalDays = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+                                                                const usedDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
+                                                                const remainingDays = Math.max(0, totalDays - usedDays);
+                                                                return Math.floor((currentSubscription.amountPaid / totalDays) * remainingDays).toFixed(2);
+                                                            })()}</span>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="pt-2 border-t border-gray-300 flex justify-between text-base font-bold text-orange-600">
+                                                        <span>Amount to Pay</span>
+                                                        <span>₹{(() => {
+                                                            const newPrice = selectedPlan.price * MEAL_PRICE_MULTIPLIER[mealType.toUpperCase()];
+                                                            if (!currentSubscription) return newPrice.toFixed(2);
+
+                                                            let credit = 0;
+                                                            if (currentSubscription.plan._id === selectedPlan._id) {
+                                                                credit = currentSubscription.amountPaid;
+                                                            } else {
+                                                                const now = new Date();
+                                                                const start = new Date(currentSubscription.startDate);
+                                                                const end = new Date(currentSubscription.endDate);
+                                                                const totalDays = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+                                                                const usedDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
+                                                                const remainingDays = Math.max(0, totalDays - usedDays);
+                                                                credit = Math.floor((currentSubscription.amountPaid / totalDays) * remainingDays);
+                                                            }
+
+                                                            return Math.max(0, newPrice - credit).toFixed(2);
+                                                        })()}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                            <div className="bg-white px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-100">
                                 <button
                                     type="button"
                                     onClick={handleConfirmSubscribe}
-                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-orange-600 text-base font-medium text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 sm:ml-3 sm:w-auto sm:text-sm"
+                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-6 py-2 bg-orange-600 text-base font-medium text-white hover:bg-orange-700 transition-colors sm:ml-3 sm:w-auto sm:text-sm"
                                 >
-                                    Proceed to Payment
+                                    Confirm & Pay
                                 </button>
                                 <button
                                     type="button"

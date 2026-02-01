@@ -4,6 +4,7 @@ import { AlertCircle } from 'lucide-react';
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
+import { calculateCancellationFee } from '../utils/orderUtils';
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -45,16 +46,11 @@ const Orders = () => {
         };
     }, [user]);
 
-    const handleCancelOrder = async (orderId, totalAmount) => {
-        // Calculate refund amount (80% after 20% cancellation fee)
-        const cancellationFee = totalAmount * 0.20;
-        const refundAmount = totalAmount * 0.80;
+    const handleCancelOrder = async (order) => {
+        // Calculate refund using utility function
+        const { cancellationFee, refundAmount, percentage, message } = calculateCancellationFee(order);
 
-        const confirmMessage = `⚠️ Cancellation Fee: 20% (₹${cancellationFee.toFixed(2)})\n\n` +
-            `You will receive ₹${refundAmount.toFixed(2)} refund to your bank account.\n\n` +
-            `Are you sure you want to cancel this order?`;
-
-        if (!window.confirm(confirmMessage)) return;
+        if (!window.confirm(message)) return;
 
         try {
             const config = {
@@ -64,15 +60,26 @@ const Orders = () => {
             };
 
             const response = await axios.put(
-                `http://localhost:5000/api/orders/${orderId}/cancel`,
+                `http://localhost:5000/api/orders/${order._id}/cancel`,
                 {},
                 config
             );
 
-            showNotification(
-                `Order cancelled. ₹${response.data.refundAmount.toFixed(2)} sent to your bank account`,
-                'success'
-            );
+            const { refund, refundError } = response.data;
+
+            if (refundError) {
+                showNotification(
+                    `Order cancelled. Refund failed: ${refundError}. Contact support.`,
+                    'warning'
+                );
+            } else if (refund) {
+                showNotification(
+                    `Order cancelled. ₹${(refund.amount / 100).toFixed(2)} refund processed.`,
+                    'success'
+                );
+            } else {
+                showNotification('Order cancelled (No refund applicable).', 'info');
+            }
 
             // Refresh orders
             const res = await axios.get('http://localhost:5000/api/orders/myorders', config);
@@ -141,7 +148,7 @@ const Orders = () => {
                                             order.status !== 'Cancelled' &&
                                             order.status !== 'Delivered' && (
                                                 <button
-                                                    onClick={() => handleCancelOrder(order._id, order.totalAmount)}
+                                                    onClick={() => handleCancelOrder(order)}
                                                     className="ml-4 px-3 py-1 border border-red-600 text-red-600 rounded-md text-sm hover:bg-red-50 transition-colors"
                                                 >
                                                     Cancel Order
@@ -168,7 +175,7 @@ const Orders = () => {
                                                                 </span>
                                                             </div>
                                                             <div className="ml-4 flex-shrink-0">
-                                                                ₹{item.price * item.quantity}
+                                                                ₹{order.type === 'event' ? item.price : item.price * item.quantity}
                                                             </div>
                                                         </li>
                                                     ))}
@@ -202,6 +209,25 @@ const Orders = () => {
                                                 {new Date(order.deliveryDate).toLocaleDateString()}
                                             </dd>
                                         </div>
+
+                                        {/* Refund Details for Cancelled Orders */}
+                                        {order.status === 'Cancelled' && (
+                                            <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 bg-red-50">
+                                                <dt className="text-sm font-medium text-red-800">Refund Information</dt>
+                                                <dd className="mt-1 text-sm text-red-700 sm:mt-0 sm:col-span-2">
+                                                    <div className="flex flex-col space-y-1">
+                                                        <div className="flex justify-between max-w-xs">
+                                                            <span>Cancellation Fee:</span>
+                                                            <span className="font-semibold">₹{order.cancellationFee?.toFixed(2) || '0.00'}</span>
+                                                        </div>
+                                                        <div className="flex justify-between max-w-xs text-green-700 font-bold">
+                                                            <span>Amount Refunded:</span>
+                                                            <span>₹{order.refundAmount?.toFixed(2) || '0.00'}</span>
+                                                        </div>
+                                                    </div>
+                                                </dd>
+                                            </div>
+                                        )}
                                     </dl>
                                 </div>
                             </div>

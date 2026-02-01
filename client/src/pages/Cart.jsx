@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CartContext from '../context/CartContext';
 import AuthContext from '../context/AuthContext';
@@ -122,6 +122,18 @@ const Cart = () => {
         setDeliveryAddress({ ...deliveryAddress, [e.target.name]: e.target.value });
     };
 
+    // Calculate order summary values using useMemo for better performance
+    const orderSummary = useMemo(() => {
+        const total = getCartTotal();
+        const delivery = cartItems.reduce((acc, item) => acc + (item.deliveryCharge || 0), 0);
+        const subtotal = total - delivery;
+        const discountAmount = calculateDiscount(subtotal);
+        const finalTotal = total - discountAmount;
+
+        return { total, delivery, subtotal, discountAmount, finalTotal };
+    }, [cartItems, appliedCoupon, getCartTotal, calculateDiscount]);
+
+
     const handleCheckout = async () => {
         if (!user) {
             navigate('/login');
@@ -137,11 +149,7 @@ const Cart = () => {
         setError('');
 
         try {
-            const total = getCartTotal();
-            const delivery = cartItems.reduce((acc, item) => acc + (item.deliveryCharge || 0), 0);
-            const subtotal = total - delivery;
-            const discountAmount = calculateDiscount(subtotal);
-            const finalTotal = total - discountAmount;
+            const { subtotal, delivery, discountAmount, finalTotal } = orderSummary;
 
             // 1. Create Razorpay Order
             const config = {
@@ -184,9 +192,9 @@ const Cart = () => {
                         const dbOrderItems = cartItems.map(item => {
                             if (item.type === 'event') {
                                 return {
-                                    name: `Event Catering (${item.guestCount} Guests)`,
-                                    quantity: 1,
-                                    price: item.totalAmount,
+                                    name: 'Event Catering',
+                                    quantity: item.guestCount, // Store guest count as quantity
+                                    price: item.totalAmount,   // Store total amount as price (as requested)
                                     selectedItems: item.items.map(i => i.name)
                                 };
                             } else if (item.type === 'single_tiffin') {
@@ -478,38 +486,27 @@ const Cart = () => {
                                 {couponSuccess && <p className="mt-2 text-sm text-green-600">{couponSuccess}</p>}
                             </div>
 
-                            {(() => {
-                                const total = getCartTotal();
-                                const delivery = cartItems.reduce((acc, item) => acc + (item.deliveryCharge || 0), 0);
-                                const subtotal = total - delivery;
-                                const discountAmount = calculateDiscount(subtotal);
-                                const finalTotal = total - discountAmount;
 
-                                return (
-                                    <>
-                                        <div className="flex justify-between mb-2">
-                                            <span className="text-gray-600">Subtotal</span>
-                                            <span className="font-medium text-gray-900">₹{subtotal}</span>
-                                        </div>
-                                        <div className="flex justify-between mb-2">
-                                            <span className="text-gray-600">Delivery</span>
-                                            <span className="font-medium text-green-600">
-                                                {delivery > 0 ? `₹${delivery}` : 'Free'}
-                                            </span>
-                                        </div>
-                                        {discountAmount > 0 && (
-                                            <div className="flex justify-between mb-4 text-green-600">
-                                                <span>Discount ({appliedCoupon.code})</span>
-                                                <span>-₹{discountAmount}</span>
-                                            </div>
-                                        )}
-                                        <div className="border-t border-gray-200 pt-4 flex justify-between mb-6">
-                                            <span className="text-xl font-bold text-gray-900">Total</span>
-                                            <span className="text-xl font-bold text-gray-900">₹{finalTotal}</span>
-                                        </div>
-                                    </>
-                                );
-                            })()}
+                            <div className="flex justify-between mb-2">
+                                <span className="text-gray-600">Subtotal</span>
+                                <span className="font-medium text-gray-900">₹{orderSummary.subtotal}</span>
+                            </div>
+                            <div className="flex justify-between mb-2">
+                                <span className="text-gray-600">Delivery</span>
+                                <span className="font-medium text-green-600">
+                                    {orderSummary.delivery > 0 ? `₹${orderSummary.delivery}` : 'Free'}
+                                </span>
+                            </div>
+                            {orderSummary.discountAmount > 0 && (
+                                <div className="flex justify-between mb-4 text-green-600">
+                                    <span>Discount ({appliedCoupon.code})</span>
+                                    <span>-₹{orderSummary.discountAmount}</span>
+                                </div>
+                            )}
+                            <div className="border-t border-gray-200 pt-4 flex justify-between mb-6">
+                                <span className="text-xl font-bold text-gray-900">Total</span>
+                                <span className="text-xl font-bold text-gray-900">₹{orderSummary.finalTotal}</span>
+                            </div>
                             <button
                                 onClick={handleCheckout}
                                 disabled={loading}
