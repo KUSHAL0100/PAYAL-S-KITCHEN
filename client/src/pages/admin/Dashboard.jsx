@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useMemo } from 'react';
 import axios from 'axios';
-import { Plus, Trash2, Edit2, Check, X, Package, Calendar, Clock, MessageSquare, Filter, Tag, Users, LayoutDashboard, TrendingUp, AlertCircle, CreditCard, Utensils, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, Package, Calendar, Clock, MessageSquare, Filter, Tag, Users, LayoutDashboard, TrendingUp, AlertCircle, CreditCard, Utensils, RefreshCw, ChevronRight, Activity, PieChart } from 'lucide-react';
 import AuthContext from '../../context/AuthContext';
 import NotificationContext from '../../context/NotificationContext';
 
@@ -53,6 +53,36 @@ const AdminDashboard = () => {
         dinner: '',
         isWeekendSpecial: false
     });
+
+    // Dashboard Stats Calculation
+    const stats = useMemo(() => {
+        const orderRevenue = orders.reduce((acc, order) => {
+            if (order.status === 'Pending') return acc;
+            const paid = parseFloat(order.totalAmount) || 0;
+            const refund = parseFloat(order.refundAmount) || 0;
+            return acc + (paid - refund);
+        }, 0);
+
+        const subRevenue = subscriptions.reduce((acc, sub) => acc + (parseFloat(sub.amountPaid) || 0), 0);
+        const totalRevenue = orderRevenue + subRevenue;
+
+        const totalRefunds = orders.reduce((acc, order) => acc + (parseFloat(order.refundAmount) || 0), 0);
+        const totalOrders = orders.length;
+        const activeSubscriptions = subscriptions.filter(sub => sub.status === 'Active').length;
+        const pendingComplaints = complaints.filter(c => c.status !== 'Resolved').length;
+        const totalPlans = plans.length;
+        const activeCoupons = coupons.length;
+
+        return {
+            totalRevenue: Math.round(totalRevenue).toLocaleString(),
+            totalRefunds: Math.round(totalRefunds).toLocaleString(),
+            totalOrders,
+            activeSubscriptions,
+            pendingComplaints,
+            totalPlans,
+            activeCoupons
+        };
+    }, [orders, subscriptions, complaints, plans, coupons]);
 
     useEffect(() => {
         fetchPlans();
@@ -392,219 +422,271 @@ const AdminDashboard = () => {
     };
 
     return (
-        <div className="bg-gray-50 min-h-screen py-8">
+        <div className="bg-gray-50 min-h-screen py-10">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                    <h2 className="text-3xl font-extrabold text-gray-900">Admin Dashboard</h2>
-                    <div className="flex space-x-2 overflow-x-auto">
-                        <button
-                            onClick={() => setActiveTab('overview')}
-                            className={`px-4 py-2 rounded-md font-medium whitespace-nowrap flex items-center ${activeTab === 'overview' ? 'bg-orange-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                        >
-                            <LayoutDashboard className="h-4 w-4 mr-2" />
-                            Overview
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('orders')}
-                            className={`px-4 py-2 rounded-md font-medium whitespace-nowrap ${activeTab === 'orders' ? 'bg-orange-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                        >
-                            Manage Orders
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('plans')}
-                            className={`px-4 py-2 rounded-md font-medium whitespace-nowrap ${activeTab === 'plans' ? 'bg-orange-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                        >
-                            Manage Plans
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('complaints')}
-                            className={`px-4 py-2 rounded-md font-medium whitespace-nowrap ${activeTab === 'complaints' ? 'bg-orange-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                        >
-                            Complaints
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('discounts')}
-                            className={`px-4 py-2 rounded-md font-medium whitespace-nowrap ${activeTab === 'discounts' ? 'bg-orange-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                        >
-                            Discounts
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('subscriptions')}
-                            className={`px-4 py-2 rounded-md font-medium whitespace-nowrap ${activeTab === 'subscriptions' ? 'bg-orange-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                        >
-                            Subscriptions
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('menus')}
-                            className={`px-4 py-2 rounded-md font-medium whitespace-nowrap ${activeTab === 'menus' ? 'bg-orange-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                        >
-                            Manage Menus
-                        </button>
+                {/* Header Section */}
+                <div className="flex flex-col lg:flex-row justify-between lg:items-end mb-10 gap-6">
+                    <div>
+                        <h2 className="text-4xl font-black text-gray-900 tracking-tight">Admin Dashboard</h2>
+                        <p className="text-gray-500 mt-2 text-lg">Welcome back, {user?.name || 'Admin'}. Here's what's happening today.</p>
+                    </div>
+                    <div className="flex space-x-2 overflow-x-auto pb-4 lg:pb-0 scrollbar-hide">
+                        {[
+                            { id: 'overview', icon: LayoutDashboard, label: 'Overview' },
+                            { id: 'orders', icon: Package, label: 'Orders' },
+                            { id: 'plans', icon: PieChart, label: 'Plans' },
+                            { id: 'complaints', icon: MessageSquare, label: 'Complaints' },
+                            { id: 'discounts', icon: Tag, label: 'Discounts' },
+                            { id: 'subscriptions', icon: CreditCard, label: 'Subscriptions' },
+                            { id: 'refunds', icon: RefreshCw, label: 'Refunds' },
+                            { id: 'menus', icon: Utensils, label: 'Menus' },
+                        ].map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`px-5 py-3 rounded-2xl font-bold whitespace-nowrap flex items-center transition-all ${activeTab === tab.id
+                                    ? 'bg-orange-600 text-white shadow-xl shadow-orange-200 -translate-y-1'
+                                    : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-100 hover:border-gray-200'
+                                    }`}
+                            >
+                                <tab.icon className="h-4 w-4 mr-2" />
+                                {tab.label}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
                 {/* --- Overview Tab --- */}
                 {activeTab === 'overview' && (
-                    <div className="space-y-6">
-                        <div className="flex justify-end">
-                            <button
-                                onClick={() => {
-                                    fetchOrders();
-                                    fetchSubscriptions();
-                                    fetchComplaints();
-                                    fetchCoupons();
-                                    fetchPlans();
-                                    showNotification('Dashboard refreshed', 'success');
-                                }}
-                                className="text-sm text-orange-600 hover:text-orange-800 flex items-center"
-                            >
-                                <TrendingUp className="h-4 w-4 mr-1" /> Refresh Stats
-                            </button>
-                        </div>
-
-                        {/* Stats Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        {/* Stats Grid - 3x2 Symmetric Layout */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {/* Revenue Card */}
-                            <div className="bg-white overflow-hidden shadow rounded-lg">
-                                <div className="p-5">
-                                    <div className="flex items-center">
-                                        <div className="flex-shrink-0">
-                                            <div className="rounded-md bg-green-100 p-3">
-                                                <TrendingUp className="h-6 w-6 text-green-600" />
-                                            </div>
-                                        </div>
-                                        <div className="ml-5 w-0 flex-1">
-                                            <dl>
-                                                <dt className="text-sm font-medium text-gray-500 truncate">Total Revenue</dt>
-                                                <dd className="text-2xl font-semibold text-gray-900">
-                                                    ₹{(() => {
-                                                        // Calculate order revenue
-                                                        const orderRevenue = orders.reduce((acc, order) => {
-                                                            if (order.status === 'Pending') return acc;
-                                                            const paid = parseFloat(order.totalAmount) || 0;
-                                                            const refund = parseFloat(order.refundAmount) || 0;
-                                                            // Revenue = Amount Paid - Amount Refunded
-                                                            return acc + (paid - refund);
-                                                        }, 0);
-
-                                                        // Plus subscription revenue (all non-refundable now)
-                                                        const subRevenue = subscriptions.reduce((acc, sub) => acc + (parseFloat(sub.amountPaid) || 0), 0);
-
-                                                        return Math.round(orderRevenue + subRevenue).toLocaleString();
-                                                    })()}
-                                                </dd>
-                                            </dl>
-                                        </div>
-                                    </div>
+                            <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-gray-200/50 transition-all relative overflow-hidden group">
+                                <div className="absolute -top-4 -right-4 p-8 opacity-5 group-hover:scale-125 transition-transform duration-500">
+                                    <TrendingUp className="h-24 w-24 text-green-600" />
                                 </div>
-                            </div>
-
-                            {/* Total Refunds Card */}
-                            <div className="bg-white overflow-hidden shadow rounded-lg">
-                                <div className="p-5">
-                                    <div className="flex items-center">
-                                        <div className="flex-shrink-0">
-                                            <div className="rounded-md bg-red-100 p-3">
-                                                <AlertCircle className="h-6 w-6 text-red-600" />
-                                            </div>
-                                        </div>
-                                        <div className="ml-5 w-0 flex-1">
-                                            <dl>
-                                                <dt className="text-sm font-medium text-gray-500 truncate">Total Refunds (Orders)</dt>
-                                                <dd className="text-2xl font-semibold text-gray-900">
-                                                    ₹{orders.reduce((acc, order) => acc + (parseFloat(order.refundAmount) || 0), 0).toLocaleString()}
-                                                </dd>
-                                            </dl>
+                                <div className="flex items-center space-x-5">
+                                    <div className="p-4 bg-green-50 rounded-2xl text-green-600">
+                                        <TrendingUp className="h-8 w-8" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Total Revenue</p>
+                                        <h3 className="text-3xl font-black text-gray-900 mt-1">₹{stats.totalRevenue}</h3>
+                                        <div className="flex items-center mt-2 text-green-600">
+                                            <Activity className="h-4 w-4 mr-1" />
+                                            <span className="text-xs font-bold">Net Sales</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Orders Card */}
-                            <div className="bg-white overflow-hidden shadow rounded-lg">
-                                <div className="p-5">
-                                    <div className="flex items-center">
-                                        <div className="flex-shrink-0">
-                                            <div className="rounded-md bg-blue-100 p-3">
-                                                <Package className="h-6 w-6 text-blue-600" />
-                                            </div>
-                                        </div>
-                                        <div className="ml-5 w-0 flex-1">
-                                            <dl>
-                                                <dt className="text-sm font-medium text-gray-500 truncate">Total Orders</dt>
-                                                <dd className="text-2xl font-semibold text-gray-900">
-                                                    {orders.filter(order => order.status !== 'Pending' && order.status !== 'Cancelled').length}
-                                                </dd>
-                                            </dl>
+                            <div onClick={() => setActiveTab('orders')} className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-gray-200/50 transition-all relative overflow-hidden group cursor-pointer">
+                                <div className="absolute -top-4 -right-4 p-8 opacity-5 group-hover:scale-125 transition-transform duration-500">
+                                    <Package className="h-24 w-24 text-blue-600" />
+                                </div>
+                                <div className="flex items-center space-x-5">
+                                    <div className="p-4 bg-blue-50 rounded-2xl text-blue-600">
+                                        <Package className="h-8 w-8" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Total Orders</p>
+                                        <h3 className="text-3xl font-black text-gray-900 mt-1">{stats.totalOrders}</h3>
+                                        <div className="flex items-center mt-2 text-blue-600">
+                                            <Package className="h-4 w-4 mr-1" />
+                                            <span className="text-xs font-bold uppercase">Total Transactions</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Subscriptions Card */}
-                            <div className="bg-white overflow-hidden shadow rounded-lg">
-                                <div className="p-5">
-                                    <div className="flex items-center">
-                                        <div className="flex-shrink-0">
-                                            <div className="rounded-md bg-purple-100 p-3">
-                                                <CreditCard className="h-6 w-6 text-purple-600" />
-                                            </div>
+                            <div onClick={() => setActiveTab('subscriptions')} className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-gray-200/50 transition-all relative overflow-hidden group cursor-pointer">
+                                <div className="absolute -top-4 -right-4 p-8 opacity-5 group-hover:scale-125 transition-transform duration-500">
+                                    <CreditCard className="h-24 w-24 text-purple-600" />
+                                </div>
+                                <div className="flex items-center space-x-5">
+                                    <div className="p-4 bg-purple-50 rounded-2xl text-purple-600">
+                                        <CreditCard className="h-8 w-8" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Subscriptions</p>
+                                        <h3 className="text-3xl font-black text-gray-900 mt-1">{stats.activeSubscriptions}</h3>
+                                        <div className="flex items-center mt-2 text-purple-600">
+                                            <Users className="h-4 w-4 mr-1" />
+                                            <span className="text-xs font-bold">Active Members</span>
                                         </div>
-                                        <div className="ml-5 w-0 flex-1">
-                                            <dl>
-                                                <dt className="text-sm font-medium text-gray-500 truncate">Active Subscriptions</dt>
-                                                <dd className="text-2xl font-semibold text-gray-900">
-                                                    {subscriptions.filter(sub => sub.status === 'Active').length}
-                                                </dd>
-                                            </dl>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Refunds Card */}
+                            <div onClick={() => setActiveTab('refunds')} className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-gray-200/50 transition-all relative overflow-hidden group cursor-pointer">
+                                <div className="absolute -top-4 -right-4 p-8 opacity-5 group-hover:scale-125 transition-transform duration-500">
+                                    <RefreshCw className="h-24 w-24 text-amber-600" />
+                                </div>
+                                <div className="flex items-center space-x-5">
+                                    <div className="p-4 bg-amber-50 rounded-2xl text-amber-600">
+                                        <RefreshCw className="h-8 w-8" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Refunds</p>
+                                        <h3 className="text-3xl font-black text-orange-600 mt-1">₹{stats.totalRefunds}</h3>
+                                        <div className="flex items-center mt-2 text-amber-600">
+                                            <Activity className="h-4 w-4 mr-1" />
+                                            <span className="text-xs font-bold text-gray-500 uppercase">Process Amount</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Complaints Card */}
-                            <div className="bg-white overflow-hidden shadow rounded-lg">
-                                <div className="p-5">
-                                    <div className="flex items-center">
-                                        <div className="flex-shrink-0">
-                                            <div className="rounded-md bg-red-100 p-3">
-                                                <AlertCircle className="h-6 w-6 text-red-600" />
-                                            </div>
+                            <div onClick={() => setActiveTab('complaints')} className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-gray-200/50 transition-all relative overflow-hidden group cursor-pointer">
+                                <div className="absolute -top-4 -right-4 p-8 opacity-5 group-hover:scale-125 transition-transform duration-500">
+                                    <MessageSquare className="h-24 w-24 text-red-600" />
+                                </div>
+                                <div className="flex items-center space-x-5">
+                                    <div className="p-4 bg-red-50 rounded-2xl text-red-600">
+                                        <MessageSquare className="h-8 w-8" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Complaints</p>
+                                        <h3 className="text-3xl font-black text-gray-900 mt-1">{stats.pendingComplaints}</h3>
+                                        <div className="flex items-center mt-2 text-red-600">
+                                            <AlertCircle className="h-4 w-4 mr-1" />
+                                            <span className="text-xs font-bold">Requires Action</span>
                                         </div>
-                                        <div className="ml-5 w-0 flex-1">
-                                            <dl>
-                                                <dt className="text-sm font-medium text-gray-500 truncate">Pending Complaints</dt>
-                                                <dd className="text-2xl font-semibold text-gray-900">
-                                                    {complaints.filter(c => c.status !== 'Resolved').length}
-                                                </dd>
-                                            </dl>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Coupons Card */}
+                            <div onClick={() => setActiveTab('discounts')} className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-gray-200/50 transition-all relative overflow-hidden group cursor-pointer">
+                                <div className="absolute -top-4 -right-4 p-8 opacity-5 group-hover:scale-125 transition-transform duration-500">
+                                    <Tag className="h-24 w-24 text-orange-600" />
+                                </div>
+                                <div className="flex items-center space-x-5">
+                                    <div className="p-4 bg-orange-50 rounded-2xl text-orange-600">
+                                        <Tag className="h-8 w-8" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Promo Coupons</p>
+                                        <h3 className="text-3xl font-black text-gray-900 mt-1">{stats.activeCoupons}</h3>
+                                        <div className="flex items-center mt-2 text-orange-600">
+                                            <Filter className="h-4 w-4 mr-1" />
+                                            <span className="text-xs font-bold">Active Offers</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Recent Activity Section (Optional - reusing recent orders) */}
-                        <div className="bg-white shadow rounded-lg">
-                            <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-                                <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Activity</h3>
-                            </div>
-                            <ul className="divide-y divide-gray-200">
-                                {orders.slice(0, 5).map((order) => (
-                                    <li key={order._id} className="p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="text-sm">
-                                                <span className="font-medium text-gray-900">New Order #{order._id.slice(-6).toUpperCase()}</span>
-                                                <span className="text-gray-500"> by {order.user ? order.user.name : 'Unknown'}</span>
+                        {/* Recent Activity & Quick Actions Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                            {/* Recent Activity (Left Column) */}
+                            <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                                <div className="px-8 py-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
+                                    <h3 className="text-xl font-black text-gray-900 flex items-center">
+                                        <Clock className="h-6 w-6 mr-3 text-orange-500" />
+                                        Latest Business Pulse
+                                    </h3>
+                                    <button onClick={fetchOrders} className="text-sm font-bold text-orange-600 hover:bg-orange-50 px-4 py-2 rounded-xl transition-colors">
+                                        View Full Log
+                                    </button>
+                                </div>
+                                <div className="divide-y divide-gray-50">
+                                    {orders.slice(0, 6).map((order) => (
+                                        <div key={order._id} className="p-6 hover:bg-gray-50 transition-all flex items-center justify-between group">
+                                            <div className="flex items-center space-x-5">
+                                                <div className={`p-3 rounded-2xl ${order.status === 'Confirmed' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-600'} group-hover:scale-105 transition-transform`}>
+                                                    <Package className="h-6 w-6" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-md font-black text-gray-900 capitalize">{order.type.replace('_', ' ')} Order</p>
+                                                    <p className="text-xs font-bold text-gray-400 mt-0.5 tracking-wide">
+                                                        #{order._id.slice(-6).toUpperCase()} • {order.user?.name || 'Guest'}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div className="text-sm text-gray-500">
-                                                {new Date(order.createdAt).toLocaleDateString()}
+                                            <div className="text-right">
+                                                <p className="text-lg font-black text-gray-900">₹{order.totalAmount}</p>
+                                                <p className="text-xs font-bold text-gray-400 mt-0.5 uppercase">
+                                                    {new Date(order.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                </p>
                                             </div>
                                         </div>
-                                    </li>
-                                ))}
-                                {orders.length === 0 && <li className="p-4 text-gray-500 text-center">No recent activity.</li>}
-                            </ul>
+                                    ))}
+                                    {orders.length === 0 && (
+                                        <div className="p-20 text-center">
+                                            <Activity className="h-12 w-12 text-gray-200 mx-auto mb-4" />
+                                            <p className="text-gray-400 font-bold">No recent business pulse detected.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Quick Actions & Status (Right Column) */}
+                            <div className="space-y-10">
+                                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                                    <div className="px-8 py-6 border-b border-gray-50 bg-gray-50/30">
+                                        <h3 className="text-xl font-black text-gray-900 flex items-center">
+                                            <Plus className="h-5 w-5 mr-3 text-orange-500" />
+                                            Task Shortcuts
+                                        </h3>
+                                    </div>
+                                    <div className="p-8 space-y-4">
+                                        <button
+                                            onClick={() => { setActiveTab('menus'); openMenuModal(); }}
+                                            className="w-full flex items-center justify-between p-5 rounded-2xl border border-gray-100 hover:border-orange-200 hover:bg-orange-50 transition-all group"
+                                        >
+                                            <div className="flex items-center text-left">
+                                                <div className="p-3 bg-orange-100 text-orange-600 rounded-xl mr-4 group-hover:rotate-12 transition-transform">
+                                                    <Utensils className="h-5 w-5" />
+                                                </div>
+                                                <div>
+                                                    <span className="block font-black text-gray-900">Daily Menu</span>
+                                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-tighter">Update today's meals</span>
+                                                </div>
+                                            </div>
+                                            <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
+                                        </button>
+
+                                        <button
+                                            onClick={() => { setActiveTab('plans'); openPlanModal(); }}
+                                            className="w-full flex items-center justify-between p-5 rounded-2xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition-all group"
+                                        >
+                                            <div className="flex items-center text-left">
+                                                <div className="p-3 bg-blue-100 text-blue-600 rounded-xl mr-4 group-hover:rotate-12 transition-transform">
+                                                    <Plus className="h-5 w-5" />
+                                                </div>
+                                                <div>
+                                                    <span className="block font-black text-gray-900">New Offering</span>
+                                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-tighter">Create meal plan</span>
+                                                </div>
+                                            </div>
+                                            <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
+                                        </button>
+
+                                        <button
+                                            onClick={() => setActiveTab('discounts')}
+                                            className="w-full flex items-center justify-between p-5 rounded-2xl border border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition-all group"
+                                        >
+                                            <div className="flex items-center text-left">
+                                                <div className="p-3 bg-purple-100 text-purple-600 rounded-xl mr-4 group-hover:rotate-12 transition-transform">
+                                                    <Tag className="h-5 w-5" />
+                                                </div>
+                                                <div>
+                                                    <span className="block font-black text-gray-900">Promotions</span>
+                                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-tighter">Manage coupons</span>
+                                                </div>
+                                            </div>
+                                            <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-purple-500 group-hover:translate-x-1 transition-all" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </div>
                         </div>
                     </div>
                 )}
@@ -737,6 +819,72 @@ const AdminDashboard = () => {
                                                     </button>
                                                 </div>
                                             )}
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                )}
+
+                {/* --- Refunds Tab --- */}
+                {activeTab === 'refunds' && (
+                    <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+                        <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex justify-between items-center bg-amber-50/30">
+                            <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center">
+                                <RefreshCw className="h-5 w-5 mr-3 text-amber-500" />
+                                Processed Refunds
+                            </h3>
+                            <button onClick={fetchOrders} className="text-sm text-orange-600 hover:text-orange-800">Refresh</button>
+                        </div>
+                        {loadingOrders ? (
+                            <div className="text-center py-10">Loading...</div>
+                        ) : orders.filter(o => (parseFloat(o.refundAmount) || 0) > 0).length === 0 ? (
+                            <div className="text-center py-10 text-gray-500">No refunds processed yet.</div>
+                        ) : (
+                            <ul className="divide-y divide-gray-200">
+                                {orders.filter(o => (parseFloat(o.refundAmount) || 0) > 0).map((order) => (
+                                    <li key={order._id} className="p-6 hover:bg-gray-50 transition-colors">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div>
+                                                        <p className="text-sm font-bold text-orange-600 uppercase tracking-widest mb-1">
+                                                            Order #{order._id.slice(-6).toUpperCase()}
+                                                        </p>
+                                                        <h4 className="text-lg font-black text-gray-900">{order.user?.name || 'Unknown User'}</h4>
+                                                        <p className="text-sm text-gray-500 font-medium italic">{order.user?.email}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="px-4 py-1 bg-red-50 text-red-600 text-xs font-black rounded-full border border-red-100 uppercase tracking-tighter">
+                                                            Refund Processed
+                                                        </span>
+                                                        <p className="text-2xl font-black text-gray-900 mt-2">₹{order.refundAmount}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total Paid</p>
+                                                        <p className="text-sm font-black text-gray-900">₹{order.totalAmount}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Deduction (Fee)</p>
+                                                        <p className="text-sm font-black text-red-600">₹{order.cancellationFee || 0}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Order Type</p>
+                                                        <p className="text-sm font-black text-gray-700 capitalize">{order.type.replace('_', ' ')}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Refund Date</p>
+                                                        <p className="text-sm font-black text-gray-700">{new Date(order.updatedAt).toLocaleDateString()}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="mt-4 flex items-center text-xs text-gray-400 font-bold">
+                                                    <Clock className="h-4 w-4 mr-2" />
+                                                    Original Order Date: {new Date(order.createdAt).toLocaleDateString()}
+                                                </div>
+                                            </div>
                                         </div>
                                     </li>
                                 ))}
@@ -941,85 +1089,87 @@ const AdminDashboard = () => {
                             </div>
                         </div>
                     </div>
-                )}
+                )
+                }
 
                 {/* --- Subscriptions Tab --- */}
-                {activeTab === 'subscriptions' && (
-                    <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-                        <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex justify-between items-center">
-                            <h3 className="text-lg leading-6 font-medium text-gray-900">Subscription Purchases</h3>
-                            <button onClick={fetchSubscriptions} className="text-sm text-orange-600 hover:text-orange-800">Refresh</button>
-                        </div>
-                        {loadingSubscriptions ? (
-                            <div className="text-center py-10">Loading subscriptions...</div>
-                        ) : subscriptions.length === 0 ? (
-                            <div className="text-center py-10 text-gray-500">No subscriptions found.</div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Meal Type</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {subscriptions.map((sub) => (
-                                            <tr key={sub._id}>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm font-medium text-gray-900">{sub.user ? sub.user.name : 'Unknown'}</div>
-                                                    <div className="text-sm text-gray-500">{sub.user ? sub.user.email : ''}</div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-900">{sub.plan ? sub.plan.name : 'Unknown Plan'}</div>
-                                                    <div className="text-xs text-gray-500">{sub.plan ? sub.plan.duration : ''}</div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 capitalize">
-                                                        {sub.mealType === 'both' ? 'Lunch + Dinner' : sub.mealType}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-900 max-w-xs truncate" title={sub.deliveryAddress ? `${sub.deliveryAddress.street}, ${sub.deliveryAddress.city}` : 'N/A'}>
-                                                        {sub.deliveryAddress ? `${sub.deliveryAddress.street}, ${sub.deliveryAddress.city}` : 'N/A'}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                        ${sub.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                                        {sub.status}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {new Date(sub.startDate).toLocaleDateString()}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {new Date(sub.endDate).toLocaleDateString()}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                    {sub.status === 'Active' && (
-                                                        <button
-                                                            onClick={() => handleCancelSubscription(sub._id)}
-                                                            className="text-red-600 hover:text-red-900"
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                {
+                    activeTab === 'subscriptions' && (
+                        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+                            <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex justify-between items-center">
+                                <h3 className="text-lg leading-6 font-medium text-gray-900">Subscription Purchases</h3>
+                                <button onClick={fetchSubscriptions} className="text-sm text-orange-600 hover:text-orange-800">Refresh</button>
                             </div>
-                        )}
-                    </div>
-                )}
+                            {loadingSubscriptions ? (
+                                <div className="text-center py-10">Loading subscriptions...</div>
+                            ) : subscriptions.length === 0 ? (
+                                <div className="text-center py-10 text-gray-500">No subscriptions found.</div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Meal Type</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
+                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {subscriptions.map((sub) => (
+                                                <tr key={sub._id}>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="text-sm font-medium text-gray-900">{sub.user ? sub.user.name : 'Unknown'}</div>
+                                                        <div className="text-sm text-gray-500">{sub.user ? sub.user.email : ''}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="text-sm text-gray-900">{sub.plan ? sub.plan.name : 'Unknown Plan'}</div>
+                                                        <div className="text-xs text-gray-500">{sub.plan ? sub.plan.duration : ''}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 capitalize">
+                                                            {sub.mealType === 'both' ? 'Lunch + Dinner' : sub.mealType}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="text-sm text-gray-900 max-w-xs truncate" title={sub.deliveryAddress ? `${sub.deliveryAddress.street}, ${sub.deliveryAddress.city}` : 'N/A'}>
+                                                            {sub.deliveryAddress ? `${sub.deliveryAddress.street}, ${sub.deliveryAddress.city}` : 'N/A'}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                                        ${sub.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                            {sub.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {new Date(sub.startDate).toLocaleDateString()}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {new Date(sub.endDate).toLocaleDateString()}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                        {sub.status === 'Active' && (
+                                                            <button
+                                                                onClick={() => handleCancelSubscription(sub._id)}
+                                                                className="text-red-600 hover:text-red-900"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                 {/* --- Menu Management Tab --- */}
                 {activeTab === 'menus' && (

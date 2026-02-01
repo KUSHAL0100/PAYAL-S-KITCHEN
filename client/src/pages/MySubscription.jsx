@@ -371,7 +371,13 @@ const MySubscription = () => {
                                                         showNotification('Upgrading to both meals requires additional payment. Please use the upgrade section below.', 'info');
                                                         return;
                                                     }
-                                                    if (!window.confirm(`Are you sure you want to switch to ${type.toUpperCase()} only? No refund will be given for the cancelled portion.`)) return;
+
+                                                    const isDowngrade = subscription.mealType === 'both' && type !== 'both';
+                                                    const confirmMessage = isDowngrade
+                                                        ? `Are you sure you want to switch to ${type.toUpperCase()} only? No refund will be given for the removed meal portion.`
+                                                        : `Are you sure you want to switch your subscription meal timing to ${type.toUpperCase()}?`;
+
+                                                    if (!window.confirm(confirmMessage)) return;
 
                                                     try {
                                                         const config = {

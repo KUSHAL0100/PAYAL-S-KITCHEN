@@ -357,18 +357,14 @@ const verifyRenewal = async (req, res) => {
 // @access  Private
 const getMySubscription = async (req, res) => {
     try {
-        console.log('Fetching subscription for user:', req.user._id);
         const subscription = await Subscription.findOne({
             user: req.user._id,
             status: 'Active',
         }).populate('plan');
 
-        console.log('Found subscription:', subscription);
-
         if (subscription) {
             res.json(subscription);
         } else {
-            console.log('No active subscription found for user');
             res.status(404).json({ message: 'No active subscription found' });
         }
     } catch (error) {
