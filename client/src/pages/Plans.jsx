@@ -1,12 +1,18 @@
 import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
-import { Check, AlertCircle } from 'lucide-react';
+import { Check, AlertCircle, MapPin, CheckCircle, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
 import { canUpgradeToPlan, MEAL_PRICE_MULTIPLIER } from '../utils/orderUtils';
+import AddressSelector from '../components/AddressSelector';
+import Modal from '../components/Modal';
+import SubscriptionPrice from '../components/SubscriptionPrice';
+import useRazorpay from '../hooks/useRazorpay';
 
 const Plans = () => {
+    const { initPayment, loading: paymentLoading } = useRazorpay();
+
     const [plans, setPlans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [currentSubscription, setCurrentSubscription] = useState(null);
@@ -104,66 +110,44 @@ const Plans = () => {
                 },
             };
 
-            // 1. Create Order
+            // 1. Initiate Subscription
             const { data: orderData } = await axios.post(
-                'http://localhost:5000/api/subscriptions',
+                'http://localhost:5000/api/subscriptions/subscribe-init',
                 {
                     planId: selectedPlan._id,
-                    mealType: mealType,
-                    deliveryAddress: deliveryAddress
+                    mealType,
+                    deliveryAddress
                 },
                 config
             );
 
-            // 2. Open Razorpay Checkout
-            const options = {
-                key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_placeholder',
+            // 2. Process Payment using Hook
+            await initPayment({
                 amount: orderData.amount,
                 currency: orderData.currency,
-                name: "Payal's Kitchen",
-                description: `Subscription - ${selectedPlan.name} (${mealType})`,
-                order_id: orderData.orderId,
-                handler: async function (response) {
-                    try {
-                        // 3. Verify Payment
-                        await axios.post(
-                            'http://localhost:5000/api/subscriptions/verify',
-                            {
-                                razorpay_order_id: response.razorpay_order_id,
-                                razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_signature: response.razorpay_signature,
-                                planId: selectedPlan._id,
-                                mealType: mealType,
-                                deliveryAddress: deliveryAddress
-                            },
-                            config
-                        );
-                        showNotification('Subscription successful! Redirecting...', 'success');
-                        navigate('/my-subscription');
-                    } catch (error) {
-                        console.error('Payment verification failed:', error);
-                        showNotification('Payment verification failed. Please contact support.', 'error');
-                    }
+                orderId: orderData.orderId,
+                user: user,
+                description: `Subscribe to ${selectedPlan.name} (${selectedPlan.duration})`,
+                verifyUrl: 'http://localhost:5000/api/subscriptions/subscribe-verify',
+                metadata: {
+                    planId: selectedPlan._id,
+                    mealType,
+                    deliveryAddress
                 },
-                prefill: {
-                    name: user.name,
-                    email: user.email,
+                showNotification,
+                onSuccess: (data) => {
+                    showNotification('Subscription successful! Redirecting...', 'success');
+                    navigate('/my-subscription');
                 },
-                theme: {
-                    color: '#ea580c',
-                },
-            };
-
-            const rzp1 = new window.Razorpay(options);
-            rzp1.on('payment.failed', function (response) {
-                showNotification(response.error.description, 'error');
+                onError: (err) => {
+                    // Error already handled by hook notification
+                }
             });
-            rzp1.open();
-            setSelectedPlan(null); // Close modal
 
+            setSelectedPlan(null);
         } catch (error) {
             console.error('Error initiating subscription:', error);
-            showNotification('Failed to initiate subscription. Please try again.', 'error');
+            showNotification(error.response?.data?.message || 'Failed to initiate subscription', 'error');
         }
     };
 
@@ -181,35 +165,45 @@ const Plans = () => {
         .sort((a, b) => a.price - b.price);
 
     const PlanCard = ({ plan }) => {
-        const isCurrent = currentSubscription &&
-            currentSubscription.plan._id === plan._id &&
-            (currentSubscription.mealType === 'both' || !currentSubscription.mealType);
+        const isCurrent = currentSubscription && currentSubscription.plan._id === plan._id;
+        const isSelected = selectedPlan && selectedPlan._id === plan._id;
 
         return (
-            <div key={plan._id} className={`border rounded-lg shadow-sm divide-y divide-gray-200 bg-white flex flex-col hover:shadow-lg transition-shadow duration-300 ${isCurrent ? 'border-orange-500 border-2' : 'border-gray-200'}`}>
-                <div className="p-6">
+            <div key={plan._id} className={`relative border rounded-2xl shadow-sm divide-y divide-gray-200 bg-white flex flex-col hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ${isCurrent ? 'ring-2 ring-orange-500 border-orange-500' : isSelected ? 'ring-2 ring-blue-500 border-blue-500 scale-105' : 'border-gray-200'}`}>
+                <div className="p-8">
                     {isCurrent && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 mb-2">
-                            Current Plan
-                        </span>
+                        <div className="absolute top-0 right-0 transform translate-x-2 -translate-y-2">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-orange-600 text-white shadow-lg">
+                                <Check className="w-3 h-3 mr-1" /> ACTIVE
+                            </span>
+                        </div>
                     )}
-                    <h3 className="text-lg leading-6 font-medium text-gray-900">{plan.name}</h3>
-                    <p className="mt-4 text-sm text-gray-500">{plan.description}</p>
-                    <p className="mt-8">
-                        <span className="text-4xl font-extrabold text-gray-900">₹{plan.price}</span>
-                        <span className="text-base font-medium text-gray-500">/{plan.duration}</span>
+                    <h3 className="text-xl leading-8 font-black text-gray-900">{plan.name}</h3>
+                    <p className="mt-4 text-sm text-gray-500 leading-relaxed h-10">{plan.description}</p>
+                    <p className="mt-8 flex items-baseline">
+                        <span className="text-5xl font-black text-gray-900">₹{plan.price}</span>
+                        <span className="text-base font-bold text-gray-600 ml-1">/{plan.duration}</span>
                     </p>
                     <button
                         type="button"
                         onClick={() => handleInitiateSubscribe(plan)}
-                        disabled={isCurrent}
-                        className={`mt-8 block w-full border border-transparent rounded-md py-2 text-sm font-semibold text-white text-center transition-colors duration-200 ${isCurrent
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-orange-600 hover:bg-orange-700'
+                        disabled={isCurrent && currentSubscription?.mealType === 'both'}
+                        className={`mt-8 block w-full border border-transparent rounded-xl py-3 text-sm font-black text-white text-center transition-all duration-300 shadow-md transform active:scale-95 ${isCurrent && currentSubscription?.mealType === 'both'
+                            ? 'bg-gray-300 cursor-not-allowed shadow-none'
+                            : isCurrent
+                                ? 'bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700'
+                                : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 hover:shadow-orange-200/50'
                             }`}
                     >
-                        {isCurrent ? 'Current Plan' : 'Subscribe Now'}
+                        {isCurrent
+                            ? (currentSubscription?.mealType === 'both' ? 'Fully Subscribed' : 'Upgrade Meal Type')
+                            : 'Choose Plan'}
                     </button>
+                    {isCurrent && currentSubscription?.mealType !== 'both' && (
+                        <p className="mt-2 text-center text-[10px] font-bold text-teal-600 uppercase tracking-wider">
+                            Currently: {currentSubscription.mealType} only
+                        </p>
+                    )}
                 </div>
                 <div className="pt-6 pb-8 px-6 flex-grow">
                     <h4 className="text-sm font-medium text-gray-900 tracking-wide uppercase">What's included</h4>
@@ -268,183 +262,87 @@ const Plans = () => {
             </div>
 
             {/* Meal Selection Modal */}
-            {selectedPlan && (
-                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setSelectedPlan(null)}></div>
-                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                                <div className="sm:flex sm:items-start">
-                                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                                        <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                                            Customize Your Subscription
-                                        </h3>
-                                        <div className="mt-2">
-                                            <p className="text-sm text-gray-500 mb-4">
-                                                Plan: <span className="font-semibold">{selectedPlan.name} ({selectedPlan.duration})</span>
-                                            </p>
+            <Modal
+                isOpen={!!selectedPlan}
+                onClose={() => setSelectedPlan(null)}
+                title="Customize Your Subscription"
+                maxWidth="sm:max-w-xl"
+            >
+                <div>
+                    <p className="text-sm text-gray-500 mb-6 flex items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <Info className="w-4 h-4 mr-2 text-orange-500" />
+                        Selected Plan: <span className="font-black text-gray-900 ml-1">{selectedPlan?.name} ({selectedPlan?.duration})</span>
+                    </p>
 
-                                            {/* Meal Type Selection */}
-                                            <div className="mb-6">
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Select Meal Option</label>
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center">
-                                                        <input
-                                                            id="both"
-                                                            name="mealType"
-                                                            type="radio"
-                                                            checked={mealType === 'both'}
-                                                            onChange={() => setMealType('both')}
-                                                            disabled={currentSubscription?.plan?._id === selectedPlan._id && (currentSubscription?.mealType === 'both' || !currentSubscription?.mealType)}
-                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300 disabled:opacity-50"
-                                                        />
-                                                        <label htmlFor="both" className={`ml-3 block text-sm font-medium ${currentSubscription?.plan?._id === selectedPlan._id && (currentSubscription?.mealType === 'both' || !currentSubscription?.mealType) ? 'text-gray-400' : 'text-gray-700'}`}>
-                                                            Both (Lunch + Dinner) - <span className="font-bold">₹{selectedPlan.price * MEAL_PRICE_MULTIPLIER.BOTH}</span>
-                                                        </label>
-                                                    </div>
-                                                    <div className="flex items-center">
-                                                        <input
-                                                            id="lunch"
-                                                            name="mealType"
-                                                            type="radio"
-                                                            checked={mealType === 'lunch'}
-                                                            onChange={() => setMealType('lunch')}
-                                                            disabled={
-                                                                currentSubscription?.plan?._id === selectedPlan._id &&
-                                                                (currentSubscription?.mealType === 'lunch' || currentSubscription?.mealType === 'dinner' || currentSubscription?.mealType === 'both')
-                                                            }
-                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300 disabled:opacity-50"
-                                                        />
-                                                        <label htmlFor="lunch" className={`ml-3 block text-sm font-medium ${currentSubscription?.plan?._id === selectedPlan._id && (currentSubscription?.mealType === 'lunch' || currentSubscription?.mealType === 'dinner' || currentSubscription?.mealType === 'both') ? 'text-gray-400' : 'text-gray-700'}`}>
-                                                            Lunch Only - <span className="font-bold">₹{selectedPlan.price * MEAL_PRICE_MULTIPLIER.LUNCH_ONLY}</span>
-                                                        </label>
-                                                    </div>
-                                                    <div className="flex items-center">
-                                                        <input
-                                                            id="dinner"
-                                                            name="mealType"
-                                                            type="radio"
-                                                            checked={mealType === 'dinner'}
-                                                            onChange={() => setMealType('dinner')}
-                                                            disabled={
-                                                                currentSubscription?.plan?._id === selectedPlan._id &&
-                                                                (currentSubscription?.mealType === 'dinner' || currentSubscription?.mealType === 'lunch' || currentSubscription?.mealType === 'both')
-                                                            }
-                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300 disabled:opacity-50"
-                                                        />
-                                                        <label htmlFor="dinner" className={`ml-3 block text-sm font-medium ${currentSubscription?.plan?._id === selectedPlan._id && (currentSubscription?.mealType === 'dinner' || currentSubscription?.mealType === 'lunch' || currentSubscription?.mealType === 'both') ? 'text-gray-400' : 'text-gray-700'}`}>
-                                                            Dinner Only - <span className="font-bold">₹{selectedPlan.price * MEAL_PRICE_MULTIPLIER.DINNER_ONLY}</span>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
+                    {/* Meal Type Selection */}
+                    <div className="mb-8">
+                        <label className="block text-xs font-black text-gray-400 mb-4 uppercase tracking-widest">Select Meal Option</label>
+                        <div className="grid grid-cols-1 gap-3">
+                            {[
+                                { id: 'both', label: 'Lunch + Dinner', multiplier: MEAL_PRICE_MULTIPLIER.BOTH, desc: 'Complete daily nutrition' },
+                                { id: 'lunch', label: 'Lunch Only', multiplier: MEAL_PRICE_MULTIPLIER.LUNCH_ONLY, desc: 'Mid-day healthy meal' },
+                                { id: 'dinner', label: 'Dinner Only', multiplier: MEAL_PRICE_MULTIPLIER.DINNER_ONLY, desc: 'Light evening meal' }
+                            ].map((opt) => {
+                                const isCurrentlyActive = currentSubscription?.plan?._id === selectedPlan?._id && currentSubscription?.mealType === opt.id;
+                                const canSelect = !isCurrentlyActive && (currentSubscription?.plan?._id !== selectedPlan?._id || opt.id === 'both');
 
-                                            {/* Address Input */}
-                                            <div className="mb-4">
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Address</label>
-                                                <div className="space-y-3">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Street Address"
-                                                        value={deliveryAddress.street}
-                                                        onChange={(e) => setDeliveryAddress({ ...deliveryAddress, street: e.target.value })}
-                                                        className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border"
-                                                    />
-                                                    <div className="flex space-x-2">
-                                                        <input
-                                                            type="text"
-                                                            placeholder="City"
-                                                            value={deliveryAddress.city}
-                                                            onChange={(e) => setDeliveryAddress({ ...deliveryAddress, city: e.target.value })}
-                                                            className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border"
-                                                        />
-                                                        <input
-                                                            type="text"
-                                                            placeholder="ZIP Code"
-                                                            value={deliveryAddress.zip}
-                                                            onChange={(e) => setDeliveryAddress({ ...deliveryAddress, zip: e.target.value })}
-                                                            className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Price Breakdown */}
-                                            <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                                <h4 className="text-sm font-bold text-gray-900 mb-3">Price Breakdown</h4>
-                                                <div className="space-y-2 text-sm">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-gray-600">New Plan Price</span>
-                                                        <span className="font-medium text-gray-900">₹{(selectedPlan.price * MEAL_PRICE_MULTIPLIER[mealType.toUpperCase()]).toFixed(2)}</span>
-                                                    </div>
-
-                                                    {currentSubscription && (
-                                                        <div className="flex justify-between text-green-600 font-medium">
-                                                            <span>Upgrade Credit (Existing Plan)</span>
-                                                            <span>- ₹{(() => {
-                                                                if (currentSubscription.plan._id === selectedPlan._id) {
-                                                                    return currentSubscription.amountPaid.toFixed(2);
-                                                                }
-                                                                const now = new Date();
-                                                                const start = new Date(currentSubscription.startDate);
-                                                                const end = new Date(currentSubscription.endDate);
-                                                                const totalDays = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
-                                                                const usedDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
-                                                                const remainingDays = Math.max(0, totalDays - usedDays);
-                                                                return Math.floor((currentSubscription.amountPaid / totalDays) * remainingDays).toFixed(2);
-                                                            })()}</span>
-                                                        </div>
-                                                    )}
-
-                                                    <div className="pt-2 border-t border-gray-300 flex justify-between text-base font-bold text-orange-600">
-                                                        <span>Amount to Pay</span>
-                                                        <span>₹{(() => {
-                                                            const newPrice = selectedPlan.price * MEAL_PRICE_MULTIPLIER[mealType.toUpperCase()];
-                                                            if (!currentSubscription) return newPrice.toFixed(2);
-
-                                                            let credit = 0;
-                                                            if (currentSubscription.plan._id === selectedPlan._id) {
-                                                                credit = currentSubscription.amountPaid;
-                                                            } else {
-                                                                const now = new Date();
-                                                                const start = new Date(currentSubscription.startDate);
-                                                                const end = new Date(currentSubscription.endDate);
-                                                                const totalDays = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
-                                                                const usedDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
-                                                                const remainingDays = Math.max(0, totalDays - usedDays);
-                                                                credit = Math.floor((currentSubscription.amountPaid / totalDays) * remainingDays);
-                                                            }
-
-                                                            return Math.max(0, newPrice - credit).toFixed(2);
-                                                        })()}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                return (
+                                    <div
+                                        key={opt.id}
+                                        onClick={() => canSelect && setMealType(opt.id)}
+                                        className={`relative flex flex-col p-5 border-2 rounded-2xl cursor-pointer transition-all duration-300 ${mealType === opt.id
+                                            ? 'border-orange-500 bg-orange-50/50 shadow-md ring-1 ring-orange-500'
+                                            : 'border-gray-100 hover:border-gray-200 bg-white'
+                                            } ${!canSelect ? 'opacity-40 cursor-not-allowed grayscale' : ''}`}
+                                    >
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className={`text-sm font-black ${mealType === opt.id ? 'text-orange-900' : 'text-gray-900'}`}>{opt.label}</span>
+                                            {isCurrentlyActive && <span className="text-[10px] font-black text-teal-600 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">ACTIVE</span>}
+                                            {!isCurrentlyActive && <span className="text-sm font-black text-gray-900">₹{(selectedPlan?.price * opt.multiplier).toFixed(0)}</span>}
                                         </div>
+                                        <span className="text-[11px] text-gray-500 font-medium">{opt.desc}</span>
+                                        {mealType === opt.id && (
+                                            <div className="absolute -top-1.5 -right-1.5 bg-orange-600 text-white rounded-full p-1 shadow-lg transform scale-110">
+                                                <CheckCircle className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            </div>
-                            <div className="bg-white px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-100">
-                                <button
-                                    type="button"
-                                    onClick={handleConfirmSubscribe}
-                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-6 py-2 bg-orange-600 text-base font-medium text-white hover:bg-orange-700 transition-colors sm:ml-3 sm:w-auto sm:text-sm"
-                                >
-                                    Confirm & Pay
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedPlan(null)}
-                                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
+                                );
+                            })}
                         </div>
                     </div>
+
+                    {/* Address Selection */}
+                    <div className="mb-4">
+                        <AddressSelector
+                            user={user}
+                            selectedAddress={deliveryAddress}
+                            onAddressChange={setDeliveryAddress}
+                        />
+                    </div>
+
+                    {/* Unified Price Component */}
+                    {selectedPlan && (
+                        <SubscriptionPrice
+                            selectedPlan={selectedPlan}
+                            currentSubscription={currentSubscription}
+                            mealType={mealType}
+                            MEAL_PRICE_MULTIPLIER={MEAL_PRICE_MULTIPLIER}
+                        />
+                    )}
+
+                    <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                        <button
+                            type="button"
+                            onClick={handleConfirmSubscribe}
+                            disabled={paymentLoading}
+                            className={`flex-1 inline-flex justify-center items-center rounded-2xl border border-transparent shadow-xl px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-sm font-black text-white hover:from-orange-600 hover:to-orange-700 transition-all duration-300 transform active:scale-95 disabled:opacity-50`}
+                        >
+                            {paymentLoading ? 'Initializing Secure Payment...' : 'Confirm & Pay Now'}
+                        </button>
+                    </div>
                 </div>
-            )}
+            </Modal>
         </div>
     );
 };

@@ -1,11 +1,6 @@
 const Order = require('../models/Order');
-const Razorpay = require('razorpay');
+const razorpayUtil = require('../utils/razorpay');
 const crypto = require('crypto');
-
-const instance = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -145,10 +140,7 @@ const updateOrderStatus = async (req, res) => {
             // If it's already paid, trigger a full refund (100% since merchant rejected it)
             if (order.paymentStatus === 'Paid' && order.paymentId) {
                 try {
-                    await instance.payments.refund(order.paymentId, {
-                        amount: Math.round(total * 100),
-                        speed: "optimum"
-                    });
+                    await razorpayUtil.processRefund(order.paymentId, total);
                     order.refundAmount = total;
                     order.cancellationFee = 0;
                 } catch (refundErr) {
@@ -190,18 +182,7 @@ const createRazorpayOrder = async (req, res) => {
     const { amount } = req.body;
 
     try {
-        const options = {
-            amount: Math.round(amount * 100), // Amount in paise, rounded to nearest integer
-            currency: 'INR',
-            receipt: `receipt_cart_${Date.now()}`,
-        };
-
-        const razorpay = new Razorpay({
-            key_id: process.env.RAZORPAY_KEY_ID,
-            key_secret: process.env.RAZORPAY_KEY_SECRET,
-        });
-
-        const order = await razorpay.orders.create(options);
+        const order = await razorpayUtil.createOrder(amount, 'receipt_cart');
 
         res.json({
             id: order.id,
@@ -221,14 +202,9 @@ const verifyPayment = async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
     try {
-        const body = razorpay_order_id + '|' + razorpay_payment_id;
+        const isValid = razorpayUtil.verifySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
 
-        const expectedSignature = crypto
-            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-            .update(body.toString())
-            .digest('hex');
-
-        if (expectedSignature !== razorpay_signature) {
+        if (!isValid) {
             return res.status(400).json({ message: 'Invalid payment signature' });
         }
 
@@ -291,10 +267,7 @@ const cancelOrder = async (req, res) => {
 
         if (refundAmount > 0 && order.paymentStatus === 'Paid' && order.paymentId) {
             try {
-                const refund = await instance.payments.refund(order.paymentId, {
-                    amount: Math.round(refundAmount * 100),
-                    speed: "optimum"
-                });
+                const refund = await razorpayUtil.processRefund(order.paymentId, refundAmount);
                 refundData = refund;
                 console.log(`Refund processed: ${refund.id} (₹${refundAmount})`);
             } catch (error) {

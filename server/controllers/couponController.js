@@ -5,7 +5,6 @@ const Coupon = require('../models/Coupon');
 // @access  Private/Admin
 const createCoupon = async (req, res) => {
     const { code, discountPercentage, expiryDate } = req.body;
-    console.log('createCoupon req.body:', req.body);
 
     try {
         const couponExists = await Coupon.findOne({ code });

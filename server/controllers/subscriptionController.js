@@ -2,14 +2,9 @@ const Subscription = require('../models/Subscription');
 const Plan = require('../models/Plan');
 const User = require('../models/User');
 const Order = require('../models/Order');
-const Razorpay = require('razorpay');
+const razorpayUtil = require('../utils/razorpay');
+const subUtils = require('../utils/subscriptionUtils');
 const crypto = require('crypto');
-
-// Initialize Razorpay
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
 
 // @desc    Buy a subscription (Create Razorpay Order)
 // @route   POST /api/subscriptions
@@ -40,25 +35,8 @@ const buySubscription = async (req, res) => {
         let upgradeDiscount = 0;
 
         if (activeSub) {
-            const now = new Date();
-            const start = new Date(activeSub.startDate);
-            const end = new Date(activeSub.endDate);
-
-            const totalDays = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
-            const usedDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
-            const remainingDays = Math.max(0, totalDays - usedDays);
-
-            if (remainingDays > 0) {
-                // If it's the same plan, give FULL credit for the amount already paid
-                // as per user requirement: "don't charge for that amount which i already paid for"
-                if (activeSub.plan.toString() === planId.toString()) {
-                    upgradeDiscount = activeSub.amountPaid;
-                } else {
-                    // If switching to a DIFFERENT plan, use pro-rata credit
-                    upgradeDiscount = Math.floor((activeSub.amountPaid / totalDays) * remainingDays);
-                }
-                finalPrice = Math.max(0, newPlanPrice - upgradeDiscount);
-            }
+            upgradeDiscount = subUtils.calculateProRataCredit(activeSub);
+            finalPrice = Math.max(0, newPlanPrice - upgradeDiscount);
         }
 
         // Razorpay requires at least ₹1 for order creation
@@ -71,13 +49,7 @@ const buySubscription = async (req, res) => {
             // Let's stick with min ₹1 for now to ensure Razorpay flow works, or handle free case.
         }
 
-        const options = {
-            amount: Math.round(totalAmount * 100), // Amount in paise
-            currency: 'INR',
-            receipt: `receipt_order_${Date.now()}`,
-        };
-
-        const order = await razorpay.orders.create(options);
+        const order = await razorpayUtil.createOrder(totalAmount, 'receipt_order');
 
         res.json({
             orderId: order.id,
@@ -101,13 +73,7 @@ const verifySubscriptionPayment = async (req, res) => {
 
     try {
         // Verify signature
-        const body = razorpay_order_id + '|' + razorpay_payment_id;
-        const expectedSignature = crypto
-            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-            .update(body.toString())
-            .digest('hex');
-
-        if (expectedSignature !== razorpay_signature) {
+        if (!razorpayUtil.verifySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature)) {
             return res.status(400).json({ message: 'Invalid payment signature' });
         }
 
@@ -136,12 +102,7 @@ const verifySubscriptionPayment = async (req, res) => {
 
         // 3. Set Subscription Dates
         const startDate = new Date();
-        const endDate = new Date();
-        if (plan.duration === 'monthly') {
-            endDate.setMonth(endDate.getMonth() + 1);
-        } else if (plan.duration === 'yearly') {
-            endDate.setFullYear(endDate.getFullYear() + 1);
-        }
+        const endDate = subUtils.calculateEndDate(startDate, plan.duration);
 
         const subscription = new Subscription({
             user: req.user._id,
@@ -255,13 +216,7 @@ const renewSubscription = async (req, res) => {
             return res.status(404).json({ message: 'Plan associated with this subscription was not found. Please buy a new subscription.' });
         }
 
-        const options = {
-            amount: plan.price * 100, // Amount in paise
-            currency: 'INR',
-            receipt: `receipt_renew_${Date.now()}`,
-        };
-
-        const order = await razorpay.orders.create(options);
+        const order = await razorpayUtil.createOrder(plan.price, 'receipt_renew');
 
         res.json({
             orderId: order.id,
@@ -308,12 +263,7 @@ const verifyRenewal = async (req, res) => {
 
         // Calculate new dates
         const startDate = new Date();
-        const endDate = new Date();
-        if (plan.duration === 'monthly') {
-            endDate.setMonth(endDate.getMonth() + 1);
-        } else if (plan.duration === 'yearly') {
-            endDate.setFullYear(endDate.getFullYear() + 1);
-        }
+        const endDate = subUtils.calculateEndDate(startDate, plan.duration);
 
         // Update Subscription
         subscription.startDate = startDate;
@@ -561,13 +511,7 @@ const upgradeSubscription = async (req, res) => {
         }
 
         // Create Razorpay order
-        const options = {
-            amount: upgradePrice * 100, // Amount in paise
-            currency: 'INR',
-            receipt: `receipt_upgrade_${Date.now()}`,
-        };
-
-        const order = await razorpay.orders.create(options);
+        const order = await razorpayUtil.createOrder(upgradePrice, 'receipt_upgrade');
 
         res.json({
             orderId: order.id,
@@ -625,12 +569,7 @@ const verifyUpgrade = async (req, res) => {
 
         // Calculate new dates
         const startDate = new Date();
-        const endDate = new Date();
-        if (newPlan.duration === 'monthly') {
-            endDate.setMonth(endDate.getMonth() + 1);
-        } else if (newPlan.duration === 'yearly') {
-            endDate.setFullYear(endDate.getFullYear() + 1);
-        }
+        const endDate = subUtils.calculateEndDate(startDate, newPlan.duration);
 
         // Calculate amount paid
         let priceMultiplier = 1;

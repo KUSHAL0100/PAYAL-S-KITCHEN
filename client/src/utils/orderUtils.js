@@ -160,6 +160,8 @@ export const canUpgradeToPlan = (currentSubscription, newPlan, newMealType = 'bo
  */
 export const MEAL_PRICE_MULTIPLIER = {
     BOTH: 1.0,
+    LUNCH: 0.5,
+    DINNER: 0.5,
     LUNCH_ONLY: 0.5,
     DINNER_ONLY: 0.5
 };

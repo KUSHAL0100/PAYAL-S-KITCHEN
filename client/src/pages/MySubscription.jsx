@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, AlertCircle, RefreshCw, TrendingUp, X } from 'lucide-react';
+import { Calendar, AlertCircle, RefreshCw, TrendingUp, X, Info } from 'lucide-react';
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
+import AddressSelector from '../components/AddressSelector';
+import Modal from '../components/Modal';
+import SubscriptionPrice from '../components/SubscriptionPrice';
+import useRazorpay from '../hooks/useRazorpay';
 
 const MySubscription = () => {
     const { user } = useContext(AuthContext);
@@ -23,6 +27,8 @@ const MySubscription = () => {
         zip: '',
         country: 'India'
     });
+
+    const { initPayment, loading: paymentLoading } = useRazorpay();
 
     useEffect(() => {
         if (!user) {
@@ -69,55 +75,31 @@ const MySubscription = () => {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             };
 
-            // Initiate renewal
             const { data: orderData } = await axios.post(
                 'http://localhost:5000/api/subscriptions/renew-init',
                 { subscriptionId: subscription._id },
                 config
             );
 
-            // Open Razorpay
-            const options = {
-                key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_placeholder',
+            await initPayment({
                 amount: orderData.amount,
                 currency: orderData.currency,
-                name: "Payal's Kitchen",
-                description: `Renew ${subscription.plan.name} Subscription`,
-                order_id: orderData.orderId,
-                handler: async function (response) {
-                    try {
-                        await axios.post(
-                            'http://localhost:5000/api/subscriptions/renew-verify',
-                            {
-                                razorpay_order_id: response.razorpay_order_id,
-                                razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_signature: response.razorpay_signature,
-                                subscriptionId: orderData.subscriptionId,
-                            },
-                            config
-                        );
-
-                        showNotification('Subscription renewed successfully!', 'success');
-                        fetchSubscriptionData();
-                    } catch (error) {
-                        console.error('Renewal verification failed:', error);
-                        showNotification('Payment verification failed. Please contact support.', 'error');
-                    }
+                orderId: orderData.orderId,
+                user: user,
+                description: `Renew ${subscription.plan.name}`,
+                verifyUrl: 'http://localhost:5000/api/subscriptions/renew-verify',
+                metadata: {
+                    subscriptionId: orderData.subscriptionId,
                 },
-                prefill: {
-                    name: user.name,
-                    email: user.email,
+                showNotification,
+                onSuccess: (data) => {
+                    showNotification('Subscription renewed successfully!', 'success');
+                    fetchSubscriptionData();
                 },
-                theme: {
-                    color: '#ea580c',
-                },
-            };
-
-            const rzp = new window.Razorpay(options);
-            rzp.on('payment.failed', function (response) {
-                showNotification(response.error.description, 'error');
+                onError: (err) => {
+                    showNotification('Renewal failed. Please contact support.', 'error');
+                }
             });
-            rzp.open();
 
         } catch (error) {
             console.error('Error initiating renewal:', error);
@@ -151,26 +133,12 @@ const MySubscription = () => {
             return;
         }
 
-        // Calculate estimated upgrade price for validation (client-side check)
-        let priceMultiplier = 1;
-        if (upgradeMealType === 'lunch' || upgradeMealType === 'dinner') {
-            priceMultiplier = 0.5;
-        }
-        const newPlanTotal = selectedUpgradePlan.price * priceMultiplier;
-        const estimatedUpgradePrice = Math.max(0, newPlanTotal - subscription.amountPaid);
-
-        if (estimatedUpgradePrice === 0 && newPlanTotal < subscription.amountPaid) {
-            showNotification('Cannot downgrade to a cheaper plan option.', 'error');
-            return;
-        }
-
         setProcessingUpgrade(true);
         try {
             const config = {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             };
 
-            // Initiate upgrade
             const { data: orderData } = await axios.post(
                 'http://localhost:5000/api/subscriptions/upgrade-init',
                 {
@@ -181,52 +149,29 @@ const MySubscription = () => {
                 config
             );
 
-            // Open Razorpay
-            const options = {
-                key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_placeholder',
+            await initPayment({
                 amount: orderData.amount,
                 currency: orderData.currency,
-                name: "Payal's Kitchen",
-                description: `Upgrade to ${selectedUpgradePlan.name} ${selectedUpgradePlan.duration}`,
-                order_id: orderData.orderId,
-                handler: async function (response) {
-                    try {
-                        await axios.post(
-                            'http://localhost:5000/api/subscriptions/upgrade-verify',
-                            {
-                                razorpay_order_id: response.razorpay_order_id,
-                                razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_signature: response.razorpay_signature,
-                                currentSubscriptionId: orderData.currentSubscriptionId,
-                                newPlanId: orderData.newPlanId,
-                                newMealType: upgradeMealType,
-                                newDeliveryAddress: upgradeDeliveryAddress
-                            },
-                            config
-                        );
-
-                        showNotification('Subscription upgraded successfully!', 'success');
-                        fetchSubscriptionData();
-                        setSelectedUpgradePlan(null); // Close modal
-                    } catch (error) {
-                        console.error('Upgrade verification failed:', error);
-                        showNotification('Payment verification failed. Please contact support.', 'error');
-                    }
+                orderId: orderData.orderId,
+                user: user,
+                description: `Upgrade to ${selectedUpgradePlan.name}`,
+                verifyUrl: 'http://localhost:5000/api/subscriptions/upgrade-verify',
+                metadata: {
+                    currentSubscriptionId: orderData.currentSubscriptionId,
+                    newPlanId: orderData.newPlanId,
+                    newMealType: upgradeMealType,
+                    newDeliveryAddress: upgradeDeliveryAddress
                 },
-                prefill: {
-                    name: user.name,
-                    email: user.email,
+                showNotification,
+                onSuccess: (data) => {
+                    showNotification('Subscription upgraded successfully!', 'success');
+                    fetchSubscriptionData();
+                    setSelectedUpgradePlan(null);
                 },
-                theme: {
-                    color: '#ea580c',
-                },
-            };
-
-            const rzp = new window.Razorpay(options);
-            rzp.on('payment.failed', function (response) {
-                showNotification(response.error.description, 'error');
+                onError: (err) => {
+                    showNotification('Upgrade failed. Please contact support.', 'error');
+                }
             });
-            rzp.open();
 
         } catch (error) {
             console.error('Error initiating upgrade:', error);
@@ -476,174 +421,84 @@ const MySubscription = () => {
             </div>
 
             {/* Upgrade Modal */}
-            {selectedUpgradePlan && (
-                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setSelectedUpgradePlan(null)}></div>
-                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                                <div className="sm:flex sm:items-start">
-                                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                                        <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                                            Customize Upgrade
-                                        </h3>
-                                        <div className="mt-2">
-                                            <p className="text-sm text-gray-500 mb-4">
-                                                Upgrade to: <span className="font-semibold">{selectedUpgradePlan.name} ({selectedUpgradePlan.duration})</span>
-                                            </p>
+            <Modal
+                isOpen={!!selectedUpgradePlan}
+                onClose={() => setSelectedUpgradePlan(null)}
+                title="Customize Upgrade"
+                maxWidth="sm:max-w-xl"
+            >
+                <div>
+                    <p className="text-sm text-gray-500 mb-6 flex items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <Info className="w-4 h-4 mr-2 text-orange-500" />
+                        Upgrade to: <span className="font-black text-gray-900 ml-1">{selectedUpgradePlan?.name} ({selectedUpgradePlan?.duration})</span>
+                    </p>
 
-                                            {/* Meal Type Selection */}
-                                            <div className="mb-6">
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Select Meal Option</label>
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center">
-                                                        <input
-                                                            id="upgrade-both"
-                                                            name="upgradeMealType"
-                                                            type="radio"
-                                                            checked={upgradeMealType === 'both'}
-                                                            onChange={() => setUpgradeMealType('both')}
-                                                            disabled={subscription.plan._id === selectedUpgradePlan._id && subscription.mealType === 'both'}
-                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300 disabled:opacity-50"
-                                                        />
-                                                        <label htmlFor="upgrade-both" className={`ml-3 block text-sm font-medium ${subscription.plan._id === selectedUpgradePlan._id && subscription.mealType === 'both' ? 'text-gray-400' : 'text-gray-700'}`}>
-                                                            Both (Lunch + Dinner) - <span className="font-bold">₹{selectedUpgradePlan.price}</span>
-                                                        </label>
-                                                    </div>
-                                                    <div className="flex items-center">
-                                                        <input
-                                                            id="upgrade-lunch"
-                                                            name="upgradeMealType"
-                                                            type="radio"
-                                                            checked={upgradeMealType === 'lunch'}
-                                                            onChange={() => setUpgradeMealType('lunch')}
-                                                            disabled={
-                                                                subscription.plan._id === selectedUpgradePlan._id &&
-                                                                (subscription.mealType === 'lunch' || subscription.mealType === 'dinner' || subscription.mealType === 'both')
-                                                            }
-                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300 disabled:opacity-50"
-                                                        />
-                                                        <label htmlFor="upgrade-lunch" className={`ml-3 block text-sm font-medium ${subscription.plan._id === selectedUpgradePlan._id && (subscription.mealType === 'lunch' || subscription.mealType === 'dinner' || subscription.mealType === 'both') ? 'text-gray-400' : 'text-gray-700'}`}>
-                                                            Lunch Only - <span className="font-bold">₹{selectedUpgradePlan.price * 0.5}</span>
-                                                        </label>
-                                                    </div>
-                                                    <div className="flex items-center">
-                                                        <input
-                                                            id="upgrade-dinner"
-                                                            name="upgradeMealType"
-                                                            type="radio"
-                                                            checked={upgradeMealType === 'dinner'}
-                                                            onChange={() => setUpgradeMealType('dinner')}
-                                                            disabled={
-                                                                subscription.plan._id === selectedUpgradePlan._id &&
-                                                                (subscription.mealType === 'dinner' || subscription.mealType === 'lunch' || subscription.mealType === 'both')
-                                                            }
-                                                            className="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300 disabled:opacity-50"
-                                                        />
-                                                        <label htmlFor="upgrade-dinner" className={`ml-3 block text-sm font-medium ${subscription.plan._id === selectedUpgradePlan._id && (subscription.mealType === 'dinner' || subscription.mealType === 'lunch' || subscription.mealType === 'both') ? 'text-gray-400' : 'text-gray-700'}`}>
-                                                            Dinner Only - <span className="font-bold">₹{selectedUpgradePlan.price * 0.5}</span>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
+                    {/* Meal Type Selection */}
+                    <div className="mb-8">
+                        <label className="block text-xs font-black text-gray-400 mb-4 uppercase tracking-widest">Select Meal Option</label>
+                        <div className="grid grid-cols-1 gap-3">
+                            {[
+                                { id: 'both', label: 'Both (Lunch + Dinner)', price: selectedUpgradePlan?.price },
+                                { id: 'lunch', label: 'Lunch Only', price: selectedUpgradePlan?.price * 0.5 },
+                                { id: 'dinner', label: 'Dinner Only', price: selectedUpgradePlan?.price * 0.5 }
+                            ].map((opt) => {
+                                const isDisabled = subscription.plan._id === selectedUpgradePlan?._id &&
+                                    (subscription.mealType === opt.id || (subscription.mealType === 'both' && opt.id !== 'both') || (opt.id !== 'both' && subscription.mealType && subscription.mealType !== opt.id));
 
-                                            {/* Address Input */}
-                                            <div className="mb-4">
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Address</label>
-                                                <div className="space-y-3">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Street Address"
-                                                        value={upgradeDeliveryAddress.street}
-                                                        onChange={(e) => setUpgradeDeliveryAddress({ ...upgradeDeliveryAddress, street: e.target.value })}
-                                                        className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border"
-                                                    />
-                                                    <div className="flex space-x-2">
-                                                        <input
-                                                            type="text"
-                                                            placeholder="City"
-                                                            value={upgradeDeliveryAddress.city}
-                                                            onChange={(e) => setUpgradeDeliveryAddress({ ...upgradeDeliveryAddress, city: e.target.value })}
-                                                            className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border"
-                                                        />
-                                                        <input
-                                                            type="text"
-                                                            placeholder="ZIP Code"
-                                                            value={upgradeDeliveryAddress.zip}
-                                                            onChange={(e) => setUpgradeDeliveryAddress({ ...upgradeDeliveryAddress, zip: e.target.value })}
-                                                            className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Price Summary */}
-                                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
-                                                <div className="flex justify-between text-sm">
-                                                    <span>New Plan Total:</span>
-                                                    <span className="font-semibold">₹{(selectedUpgradePlan.price * (upgradeMealType === 'both' ? 1 : 0.5)).toFixed(2)}</span>
-                                                </div>
-                                                <div className="flex justify-between text-sm text-green-600 mt-1">
-                                                    <span>Upgrade Credit:</span>
-                                                    <span>- ₹{(() => {
-                                                        if (subscription.plan._id === selectedUpgradePlan._id) {
-                                                            return subscription.amountPaid.toFixed(2);
-                                                        }
-                                                        const now = new Date();
-                                                        const start = new Date(subscription.startDate);
-                                                        const end = new Date(subscription.endDate);
-                                                        const totalDays = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
-                                                        const usedDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
-                                                        const remainingDays = Math.max(0, totalDays - usedDays);
-                                                        return Math.floor((subscription.amountPaid / totalDays) * remainingDays).toFixed(2);
-                                                    })()}</span>
-                                                </div>
-                                                <div className="border-t border-gray-300 mt-2 pt-2 flex justify-between font-bold text-lg text-orange-600">
-                                                    <span>Payable Amount:</span>
-                                                    <span>₹{(() => {
-                                                        const newPrice = selectedUpgradePlan.price * (upgradeMealType === 'both' ? 1 : 0.5);
-                                                        let credit = 0;
-                                                        if (subscription.plan._id === selectedUpgradePlan._id) {
-                                                            credit = subscription.amountPaid;
-                                                        } else {
-                                                            const now = new Date();
-                                                            const start = new Date(subscription.startDate);
-                                                            const end = new Date(subscription.endDate);
-                                                            const totalDays = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
-                                                            const usedDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
-                                                            const remainingDays = Math.max(0, totalDays - usedDays);
-                                                            credit = Math.floor((subscription.amountPaid / totalDays) * remainingDays);
-                                                        }
-                                                        return Math.max(0, newPrice - credit).toFixed(2);
-                                                    })()}</span>
-                                                </div>
-                                            </div>
-
+                                return (
+                                    <div
+                                        key={opt.id}
+                                        onClick={() => !isDisabled && setUpgradeMealType(opt.id)}
+                                        className={`relative flex flex-col p-5 border-2 rounded-2xl cursor-pointer transition-all duration-300 ${upgradeMealType === opt.id
+                                            ? 'border-orange-500 bg-orange-50/50 shadow-md ring-1 ring-orange-500'
+                                            : 'border-gray-100 hover:border-gray-200 bg-white'
+                                            } ${isDisabled ? 'opacity-40 cursor-not-allowed grayscale' : ''}`}
+                                    >
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className={`text-sm font-black ${upgradeMealType === opt.id ? 'text-orange-900' : 'text-gray-900'}`}>{opt.label}</span>
+                                            <span className="text-sm font-black text-gray-900">₹{opt.price?.toFixed(0)}</span>
                                         </div>
+                                        {upgradeMealType === opt.id && (
+                                            <div className="absolute -top-1.5 -right-1.5 bg-orange-600 text-white rounded-full p-1 shadow-lg transform scale-110">
+                                                <CheckCircle className="w-3.5 h-3.5" />
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            </div>
-                            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                                <button
-                                    type="button"
-                                    onClick={handleConfirmUpgrade}
-                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-orange-600 text-base font-medium text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 sm:ml-3 sm:w-auto sm:text-sm"
-                                >
-                                    Proceed to Payment
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedUpgradePlan(null)}
-                                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
+                                );
+                            })}
                         </div>
                     </div>
+
+                    {/* Address Input */}
+                    <div className="mb-4">
+                        <AddressSelector
+                            user={user}
+                            selectedAddress={upgradeDeliveryAddress}
+                            onAddressChange={setUpgradeDeliveryAddress}
+                        />
+                    </div>
+
+                    {/* Price Summary Component */}
+                    {selectedUpgradePlan && (
+                        <SubscriptionPrice
+                            selectedPlan={selectedUpgradePlan}
+                            currentSubscription={subscription}
+                            mealType={upgradeMealType}
+                        />
+                    )}
+
+                    <div className="mt-8">
+                        <button
+                            type="button"
+                            onClick={handleConfirmUpgrade}
+                            disabled={paymentLoading || processingUpgrade}
+                            className={`w-full inline-flex justify-center items-center rounded-2xl border border-transparent shadow-xl px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-sm font-black text-white hover:from-orange-600 hover:to-orange-700 transition-all duration-300 transform active:scale-95 disabled:opacity-50`}
+                        >
+                            {paymentLoading || processingUpgrade ? 'Processing...' : 'Proceed to Payment'}
+                        </button>
+                    </div>
                 </div>
-            )}
+            </Modal>
         </div>
     );
 };

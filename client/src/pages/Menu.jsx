@@ -5,6 +5,7 @@ import CartContext from '../context/CartContext';
 import NotificationContext from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { validateOrderTime } from '../utils/orderUtils';
+import Modal from '../components/Modal';
 
 const Menu = () => {
     const [selectedPlan, setSelectedPlan] = useState('Basic');
@@ -324,163 +325,115 @@ const Menu = () => {
             </div>
 
             {/* Order Modal */}
-            {isModalOpen && (
-                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setIsModalOpen(false)}></div>
+            <Modal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title={`Order Tiffin (${selectedPlan})`}
+                maxWidth="sm:max-w-md"
+            >
+                <div className="space-y-6">
+                    {/* Date Selection */}
+                    <div>
+                        <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">Select Date</label>
+                        <input
+                            type="date"
+                            value={orderDate}
+                            min={new Date().toISOString().split('T')[0]}
+                            onChange={(e) => setOrderDate(e.target.value)}
+                            className="block w-full border-gray-200 rounded-2xl shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm p-4 bg-gray-50/50 font-bold"
+                        />
+                    </div>
 
-                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                                <div className="sm:flex sm:items-start">
-                                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                                                Order Tiffin ({selectedPlan})
-                                            </h3>
-                                            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-500">
-                                                <X className="h-6 w-6" />
-                                            </button>
-                                        </div>
-
-                                        <div className="mt-4 space-y-6">
-                                            {/* Date Selection */}
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
-                                                <input
-                                                    type="date"
-                                                    value={orderDate}
-                                                    min={new Date().toISOString().split('T')[0]}
-                                                    onChange={(e) => setOrderDate(e.target.value)}
-                                                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
-                                                />
-                                            </div>
-                                            {/* Meal Time Selection */}
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Select Meal</label>
-                                                <div className="flex space-x-4">
-                                                    <label className={`flex-1 border rounded-md p-3 cursor-pointer flex items-center justify-center ${orderMealTime === 'Lunch' ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-500' : 'border-gray-300'}`}>
-                                                        <input
-                                                            type="radio"
-                                                            name="mealTime"
-                                                            value="Lunch"
-                                                            checked={orderMealTime === 'Lunch'}
-                                                            onChange={(e) => setOrderMealTime(e.target.value)}
-                                                            className="sr-only"
-                                                        />
-                                                        <span className={orderMealTime === 'Lunch' ? 'text-orange-700 font-medium' : 'text-gray-700'}>Lunch</span>
-                                                    </label>
-                                                    <label className={`flex-1 border rounded-md p-3 cursor-pointer flex items-center justify-center ${orderMealTime === 'Dinner' ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-500' : 'border-gray-300'}`}>
-                                                        <input
-                                                            type="radio"
-                                                            name="mealTime"
-                                                            value="Dinner"
-                                                            checked={orderMealTime === 'Dinner'}
-                                                            onChange={(e) => setOrderMealTime(e.target.value)}
-                                                            className="sr-only"
-                                                        />
-                                                        <span className={orderMealTime === 'Dinner' ? 'text-orange-700 font-medium' : 'text-gray-700'}>Dinner</span>
-                                                    </label>
-                                                </div>
-                                            </div>
-
-                                            {/* Menu Preview for Selected Date */}
-                                            {loadingSelectedMenu ? (
-                                                <div className="text-center text-sm text-gray-500">Loading menu...</div>
-                                            ) : selectedDateMenu ? (
-                                                <div className="bg-orange-50 border border-orange-200 rounded-md p-3">
-                                                    <p className="text-xs font-semibold text-orange-800 uppercase mb-2">
-                                                        Menu for {new Date(orderDate).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                                                    </p>
-                                                    <p className="text-sm text-gray-700">
-                                                        <strong>{orderMealTime}:</strong> {selectedDateMenu.items[orderMealTime.toLowerCase()].join(', ')}
-                                                    </p>
-                                                </div>
-                                            ) : (
-                                                <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                                                    <p className="text-sm text-red-700">No menu available for this date</p>
-                                                </div>
-                                            )}
-
-                                            {/* 12-Hour Window Warning */}
-                                            {(() => {
-                                                const validation = validateOrderTime(orderDate, orderMealTime);
-
-                                                if (!validation.isValid) {
-                                                    return (
-                                                        <div className="bg-red-50 border-l-4 border-red-400 p-4">
-                                                            <div className="flex">
-                                                                <div className="ml-3">
-                                                                    <p className="text-sm text-red-700">
-                                                                        {validation.errorMessage}
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                }
-                                                return null;
-                                            })()}
-
-                                            {/* Quantity Selection */}
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Quantity (Persons)</label>
-                                                <select
-                                                    value={orderQuantity}
-                                                    onChange={(e) => setOrderQuantity(parseInt(e.target.value))}
-                                                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md"
-                                                >
-                                                    {[1, 2, 3, 4, 5].map(num => (
-                                                        <option key={num} value={num}>{num} Person{num > 1 ? 's' : ''}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-
-                                            {/* Price Breakdown */}
-                                            <div className="bg-gray-50 p-4 rounded-md">
-                                                <div className="flex justify-between text-sm mb-1">
-                                                    <span className="text-gray-500">Price per tiffin ({selectedPlan}):</span>
-                                                    <span className="font-medium">₹{PLAN_PRICES[selectedPlan]}</span>
-                                                </div>
-                                                <div className="flex justify-between text-sm mb-1">
-                                                    <span className="text-gray-500">Quantity:</span>
-                                                    <span className="font-medium">{orderQuantity}</span>
-                                                </div>
-                                                <div className="flex justify-between text-sm mb-1">
-                                                    <span className="text-gray-500">Delivery Charge:</span>
-                                                    <span className="font-medium">₹100</span>
-                                                </div>
-                                                <div className="border-t border-gray-200 mt-2 pt-2 flex justify-between text-base font-bold">
-                                                    <span>Total:</span>
-                                                    <span className="text-orange-600">₹{totalOrderAmount}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                                <button
-                                    type="button"
-                                    onClick={handleAddToCart}
-                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-orange-600 text-base font-medium text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 sm:ml-3 sm:w-auto sm:text-sm"
+                    {/* Meal Time Selection */}
+                    <div>
+                        <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">Select Meal</label>
+                        <div className="flex space-x-3">
+                            {['Lunch', 'Dinner'].map(meal => (
+                                <label
+                                    key={meal}
+                                    className={`flex-1 border-2 rounded-2xl p-4 cursor-pointer flex flex-col items-center justify-center transition-all duration-300 ${orderMealTime === meal ? 'border-orange-500 bg-orange-50/50 ring-1 ring-orange-500' : 'border-gray-100 bg-white hover:border-gray-200'}`}
                                 >
-                                    <ShoppingCart className="h-4 w-4 mr-2" />
-                                    Add to Cart
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
+                                    <input
+                                        type="radio"
+                                        name="mealTime"
+                                        value={meal}
+                                        checked={orderMealTime === meal}
+                                        onChange={(e) => setOrderMealTime(e.target.value)}
+                                        className="sr-only"
+                                    />
+                                    <span className={`text-sm font-black ${orderMealTime === meal ? 'text-orange-900' : 'text-gray-900'}`}>{meal}</span>
+                                </label>
+                            ))}
                         </div>
                     </div>
+
+                    {/* Menu Preview */}
+                    {loadingSelectedMenu ? (
+                        <div className="text-center py-4 text-xs font-bold text-gray-400 animate-pulse uppercase tracking-widest">Fetching menu details...</div>
+                    ) : selectedDateMenu ? (
+                        <div className="bg-orange-50/50 border border-orange-100 rounded-2xl p-5 shadow-inner">
+                            <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-2">
+                                Menu Preview ({new Date(orderDate).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })})
+                            </p>
+                            <p className="text-sm text-gray-800 font-bold leading-relaxed">
+                                {selectedDateMenu.items[orderMealTime.toLowerCase()].join(', ')}
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="bg-red-50/50 border border-red-100 rounded-2xl p-5 shadow-inner">
+                            <p className="text-sm text-red-700 font-bold">Menu not available for this date.</p>
+                        </div>
+                    )}
+
+                    {/* Validation Error */}
+                    {(() => {
+                        const validation = validateOrderTime(orderDate, orderMealTime);
+                        if (!validation.isValid) {
+                            return (
+                                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-2xl">
+                                    <p className="text-xs text-red-700 font-bold">{validation.errorMessage}</p>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
+
+                    {/* Quantity Selection */}
+                    <div>
+                        <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">Quantity (Persons)</label>
+                        <select
+                            value={orderQuantity}
+                            onChange={(e) => setOrderQuantity(parseInt(e.target.value))}
+                            className="mt-1 block w-full pl-4 pr-10 py-3 text-sm border-gray-200 focus:outline-none focus:ring-orange-500 focus:border-orange-500 rounded-2xl bg-gray-50/50 font-bold"
+                        >
+                            {[1, 2, 3, 4, 5].map(num => (
+                                <option key={num} value={num}>{num} Person{num > 1 ? 's' : ''}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Price Summary */}
+                    <div className="bg-gray-900 text-white p-6 rounded-3xl shadow-2xl">
+                        <div className="flex justify-between items-center text-xs opacity-60 mb-2 font-bold uppercase tracking-widest">
+                            <span>{orderQuantity} Tiffin x ₹{PLAN_PRICES[selectedPlan]}</span>
+                            <span>+ ₹100 Delivery</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-lg font-black uppercase tracking-tight">Total Payable</span>
+                            <span className="text-3xl font-black text-orange-400">₹{totalOrderAmount}</span>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleAddToCart}
+                        className="w-full inline-flex justify-center items-center rounded-2xl border border-transparent shadow-xl px-8 py-4 bg-orange-600 text-base font-black text-white hover:bg-orange-700 transition-all duration-300 transform active:scale-95"
+                    >
+                        <ShoppingCart className="h-5 w-5 mr-3" />
+                        Add to Cart
+                    </button>
                 </div>
-            )}
+            </Modal>
         </div>
     );
 };

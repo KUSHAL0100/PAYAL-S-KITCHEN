@@ -11,59 +11,75 @@ const Navbar = () => {
     const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
     return (
-        <nav className="bg-white shadow-md">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between h-16">
-                    <div className="flex">
-                        <Link to="/" className="flex-shrink-0 flex items-center">
-                            <span className="text-2xl font-bold text-orange-600">Payal's Kitchen</span>
+        <nav className="sticky top-0 z-[100] w-full bg-white/70 backdrop-blur-xl border-b border-gray-100/50">
+            <div className="max-w-7xl mx-auto px-6 lg:px-8">
+                <div className="flex justify-between h-20">
+                    <div className="flex items-center gap-12">
+                        <Link to="/" className="flex-shrink-0 flex items-center group">
+                            <div className="h-10 w-10 bg-orange-600 rounded-xl flex items-center justify-center mr-3 group-hover:rotate-12 transition-transform shadow-lg shadow-orange-200">
+                                <span className="text-white font-black text-xl">P</span>
+                            </div>
+                            <span className="text-xl font-black text-gray-900 tracking-tight group-hover:text-orange-600 transition-colors">
+                                Payal's <span className="text-orange-600">Kitchen</span>
+                            </span>
                         </Link>
-                        <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-                            <Link to="/" className="text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-orange-500 text-sm font-medium">
-                                Home
-                            </Link>
-                            <Link to="/menu" className="text-gray-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-orange-500 text-sm font-medium">
-                                Menu
-                            </Link>
-                            <Link to="/plans" className="text-gray-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-orange-500 text-sm font-medium">
-                                Plans
-                            </Link>
-                            <Link to="/events" className="text-gray-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 border-transparent hover:border-orange-500 text-sm font-medium">
-                                Event Catering
-                            </Link>
+
+                        <div className="hidden lg:flex items-center gap-8">
+                            {[
+                                { name: 'Home', path: '/' },
+                                { name: 'Menu', path: '/menu' },
+                                { name: 'Plans', path: '/plans' },
+                                { name: 'Event Catering', path: '/events' },
+                                { name: 'Contact', path: '/complaints' },
+                            ].map((item) => (
+                                <Link
+                                    key={item.name}
+                                    to={item.path}
+                                    className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 hover:text-orange-600 transition-colors relative group py-2"
+                                >
+                                    {item.name}
+                                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-600 transition-all group-hover:w-full"></span>
+                                </Link>
+                            ))}
                         </div>
                     </div>
-                    <div className="flex items-center">
-                        <Link to="/cart" className="p-2 text-gray-400 hover:text-gray-500 relative">
-                            <ShoppingCart className="h-6 w-6" />
+
+                    <div className="flex items-center gap-3">
+                        <Link to="/cart" className="relative h-10 w-10 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors bg-gray-50 rounded-xl group">
+                            <ShoppingCart className="h-5 w-5 group-hover:scale-110 transition-transform" />
                             {cartCount > 0 && (
-                                <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full">
+                                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center bg-orange-600 text-[10px] font-black text-white rounded-lg shadow-lg shadow-orange-200">
                                     {cartCount}
                                 </span>
                             )}
                         </Link>
+
                         {user ? (
-                            <div className="ml-4 flex items-center space-x-4">
-                                <Link to="/profile" className="p-2 text-gray-400 hover:text-gray-500" title="My Profile">
-                                    <User className="h-6 w-6" />
+                            <div className="flex items-center gap-2 pl-4 border-l border-gray-100">
+                                <Link to="/profile" className="h-10 w-10 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors hover:bg-gray-50 rounded-xl" title="Profile">
+                                    <User className="h-5 w-5" />
                                 </Link>
-                                <Link to="/my-subscription" className="p-2 text-gray-400 hover:text-gray-500" title="My Subscription">
-                                    <CreditCard className="h-6 w-6" />
+                                <Link to="/my-subscription" className="h-10 w-10 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors hover:bg-gray-50 rounded-xl" title="Subscription">
+                                    <CreditCard className="h-5 w-5" />
                                 </Link>
-                                <Link to="/orders" className="p-2 text-gray-400 hover:text-gray-500" title="My Orders">
-                                    <ClipboardList className="h-6 w-6" />
+                                <Link to="/orders" className="h-10 w-10 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors hover:bg-gray-50 rounded-xl" title="Orders">
+                                    <ClipboardList className="h-5 w-5" />
                                 </Link>
-                                <Link to="/complaints" className="p-2 text-gray-400 hover:text-gray-500" title="Feedback & Complaints">
-                                    <MessageSquare className="h-6 w-6" />
-                                </Link>
-                                <span className="text-sm font-medium text-gray-700 hidden md:block">Hello, {user.name}</span>
-                                <button onClick={logout} className="p-2 text-gray-400 hover:text-gray-500" title="Logout">
-                                    <LogOut className="h-6 w-6" />
+
+                                <button
+                                    onClick={logout}
+                                    className="ml-2 h-10 w-10 flex items-center justify-center text-gray-400 hover:text-rose-600 transition-colors hover:bg-rose-50 rounded-xl"
+                                    title="Logout"
+                                >
+                                    <LogOut className="h-5 w-5" />
                                 </button>
                             </div>
                         ) : (
-                            <Link to="/login" className="ml-4 p-2 text-gray-400 hover:text-gray-500">
-                                <User className="h-6 w-6" />
+                            <Link
+                                to="/login"
+                                className="ml-4 px-6 py-2.5 bg-orange-600 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-orange-700 transition-all active:scale-95 shadow-lg shadow-orange-100"
+                            >
+                                Login
                             </Link>
                         )}
                     </div>

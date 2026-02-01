@@ -5,6 +5,8 @@ import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
 import axios from 'axios';
 import { Trash2, Plus, Minus, Tag, X, MapPin, CheckCircle } from 'lucide-react';
+import AddressSelector from '../components/AddressSelector';
+import useRazorpay from '../hooks/useRazorpay';
 
 const Cart = () => {
     const { cartItems, removeFromCart, updateQuantity, getCartTotal, clearCart } = useContext(CartContext);
@@ -13,6 +15,7 @@ const Cart = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const { initPayment, loading: paymentLoading } = useRazorpay();
 
     // Coupon State
     const [couponCode, setCouponCode] = useState('');
@@ -21,37 +24,20 @@ const Cart = () => {
     const [couponError, setCouponError] = useState('');
     const [couponSuccess, setCouponSuccess] = useState('');
 
-    // Address State
-    const [selectedAddressIndex, setSelectedAddressIndex] = useState(-1); // -1 for custom/new, >=0 for saved
     const [deliveryAddress, setDeliveryAddress] = useState({
         street: '',
         city: '',
         zip: ''
     });
-    const [isCustomAddress, setIsCustomAddress] = useState(false);
 
     useEffect(() => {
-        // Load Razorpay script
-        const script = document.createElement('script');
-        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-        script.async = true;
-        document.body.appendChild(script);
-
         // Fetch active coupons
         fetchCoupons();
-
-        return () => {
-            document.body.removeChild(script);
-        };
     }, []);
 
     useEffect(() => {
         if (user && user.addresses && user.addresses.length > 0) {
-            // Default to the first address
-            setSelectedAddressIndex(0);
             setDeliveryAddress(user.addresses[0]);
-        } else {
-            setIsCustomAddress(true);
         }
     }, [user]);
 
@@ -107,20 +93,6 @@ const Cart = () => {
         return Math.round((subtotal * appliedCoupon.discountPercentage) / 100);
     };
 
-    const handleAddressSelection = (index) => {
-        setSelectedAddressIndex(index);
-        if (index === -1) {
-            setIsCustomAddress(true);
-            setDeliveryAddress({ street: '', city: '', zip: '' });
-        } else {
-            setIsCustomAddress(false);
-            setDeliveryAddress(user.addresses[index]);
-        }
-    };
-
-    const handleCustomAddressChange = (e) => {
-        setDeliveryAddress({ ...deliveryAddress, [e.target.name]: e.target.value });
-    };
 
     // Calculate order summary values using useMemo for better performance
     const orderSummary = useMemo(() => {
@@ -151,7 +123,7 @@ const Cart = () => {
         try {
             const { subtotal, delivery, discountAmount, finalTotal } = orderSummary;
 
-            // 1. Create Razorpay Order
+            // 1. Create Razorpay Order Context
             const config = {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -164,107 +136,75 @@ const Cart = () => {
                 config
             );
 
-            // 2. Open Razorpay Checkout
-            const options = {
-                key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_placeholder',
+            // 2. Process Payment using Hook
+            await initPayment({
                 amount: orderData.amount,
                 currency: orderData.currency,
-                name: "Payal's Kitchen",
+                orderId: orderData.id,
+                user: user,
                 description: "Order Payment",
-                order_id: orderData.id,
-                handler: async function (response) {
-                    try {
-                        // 3. Verify Payment
-                        await axios.post(
-                            'http://localhost:5000/api/orders/verify',
-                            {
-                                razorpay_order_id: response.razorpay_order_id,
-                                razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_signature: response.razorpay_signature,
-                            },
-                            config
-                        );
+                verifyUrl: 'http://localhost:5000/api/orders/verify',
+                showNotification,
+                onSuccess: async (data, razorpayResponse) => {
+                    // 3. Create Database Order after successful verification
+                    // The hook handles verification POST to /api/orders/verify
 
-                        // 4. Create Database Order
-                        const hasEvent = cartItems.some(item => item.type === 'event');
-                        const orderType = hasEvent ? 'event' : 'single';
+                    const hasEvent = cartItems.some(item => item.type === 'event');
+                    const orderType = hasEvent ? 'event' : 'single';
 
-                        const dbOrderItems = cartItems.map(item => {
-                            if (item.type === 'event') {
-                                return {
-                                    name: 'Event Catering',
-                                    quantity: item.guestCount, // Store guest count as quantity
-                                    price: item.totalAmount,   // Store total amount as price (as requested)
-                                    selectedItems: item.items.map(i => i.name)
-                                };
-                            } else if (item.type === 'single_tiffin') {
-                                return {
-                                    name: item.name,
-                                    quantity: item.quantity,
-                                    price: item.price, // Per-unit price, not total
-                                    selectedItems: item.menuItems,
-                                    mealTime: item.mealTime
-                                };
-                            } else {
-                                return {
-                                    name: item.name,
-                                    quantity: item.quantity,
-                                    price: item.price
-                                };
-                            }
-                        });
-
-                        let deliveryDate = new Date();
-                        const itemWithDate = cartItems.find(item => item.deliveryDate);
-                        if (itemWithDate) {
-                            deliveryDate = new Date(itemWithDate.deliveryDate);
+                    const dbOrderItems = cartItems.map(item => {
+                        if (item.type === 'event') {
+                            return {
+                                name: 'Event Catering',
+                                quantity: item.guestCount,
+                                price: item.totalAmount,
+                                selectedItems: item.items.map(i => i.name)
+                            };
                         } else {
-                            deliveryDate.setDate(deliveryDate.getDate() + 1);
+                            return {
+                                name: item.name,
+                                quantity: item.quantity,
+                                price: item.price,
+                                selectedItems: item.menuItems,
+                                mealTime: item.mealTime
+                            };
                         }
+                    });
 
-                        const finalOrderData = {
-                            items: dbOrderItems,
-                            totalAmount: finalTotal,
-                            type: orderType,
-                            deliveryDate: deliveryDate,
-                            deliveryAddress: deliveryAddress, // Use the selected address
-                            paymentId: response.razorpay_payment_id,
-                            paymentStatus: 'Paid',
-                            discountAmount: discountAmount,
-                            couponCode: appliedCoupon ? appliedCoupon.code : null
-                        };
-
-                        await axios.post('http://localhost:5000/api/orders', finalOrderData, config);
-
-                        clearCart();
-                        showNotification('Order placed successfully!', 'success');
-                        navigate('/orders');
-
-                    } catch (error) {
-                        console.error('Order creation failed:', error);
-                        const errorMessage = error.response?.data?.message || 'Payment verification or Order creation failed. Please contact support.';
-                        showNotification(errorMessage, 'error');
+                    let deliveryDate = new Date();
+                    const itemWithDate = cartItems.find(item => item.deliveryDate);
+                    if (itemWithDate) {
+                        deliveryDate = new Date(itemWithDate.deliveryDate);
+                    } else {
+                        deliveryDate.setDate(deliveryDate.getDate() + 1);
                     }
-                },
-                prefill: {
-                    name: user.name,
-                    email: user.email,
-                },
-                theme: {
-                    color: '#ea580c',
-                },
-            };
 
-            const rzp1 = new window.Razorpay(options);
-            rzp1.on('payment.failed', function (response) {
-                showNotification(response.error.description, 'error');
+                    const finalOrderData = {
+                        items: dbOrderItems,
+                        totalAmount: finalTotal,
+                        type: orderType,
+                        deliveryDate: deliveryDate,
+                        deliveryAddress: deliveryAddress,
+                        paymentId: razorpayResponse.razorpay_payment_id,
+                        paymentStatus: 'Paid',
+                        discountAmount: discountAmount,
+                        couponCode: appliedCoupon ? appliedCoupon.code : null
+                    };
+
+                    await axios.post('http://localhost:5000/api/orders', finalOrderData, config);
+
+                    clearCart();
+                    showNotification('Order placed successfully!', 'success');
+                    navigate('/orders');
+                },
+                onError: (err) => {
+                    setError('Payment failed. Please try again.');
+                }
             });
-            rzp1.open();
 
         } catch (err) {
             console.error('Checkout error:', err);
             setError(err.response?.data?.message || 'Checkout failed');
-            showNotification(err.response?.data?.message || 'Checkout failed', 'error');
         } finally {
             setLoading(false);
         }
@@ -391,67 +331,11 @@ const Cart = () => {
 
                             {/* Delivery Address Section */}
                             <div className="mb-6 border-b border-gray-200 pb-6">
-                                <h4 className="text-sm font-medium text-gray-900 flex items-center mb-3">
-                                    <MapPin className="h-4 w-4 mr-1 text-gray-500" />
-                                    Delivery Address
-                                </h4>
-
-                                <div className="space-y-2">
-                                    {user?.addresses?.map((addr, index) => (
-                                        <div
-                                            key={index}
-                                            onClick={() => handleAddressSelection(index)}
-                                            className={`p-3 rounded-md border cursor-pointer flex items-start ${selectedAddressIndex === index ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'}`}
-                                        >
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium text-gray-900">{addr.label || `Address ${index + 1}`}</p>
-                                                <p className="text-xs text-gray-500">{addr.street}, {addr.city}, {addr.zip}</p>
-                                            </div>
-                                            {selectedAddressIndex === index && <CheckCircle className="h-5 w-5 text-orange-600" />}
-                                        </div>
-                                    ))}
-
-                                    <div
-                                        onClick={() => handleAddressSelection(-1)}
-                                        className={`p-3 rounded-md border cursor-pointer flex items-start ${selectedAddressIndex === -1 ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'}`}
-                                    >
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium text-gray-900">Use a different address</p>
-                                        </div>
-                                        {selectedAddressIndex === -1 && <CheckCircle className="h-5 w-5 text-orange-600" />}
-                                    </div>
-                                </div>
-
-                                {isCustomAddress && (
-                                    <div className="mt-4 space-y-2 animate-fadeIn">
-                                        <input
-                                            type="text"
-                                            name="street"
-                                            value={deliveryAddress.street}
-                                            onChange={handleCustomAddressChange}
-                                            placeholder="Street Address"
-                                            className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
-                                        />
-                                        <div className="flex space-x-2">
-                                            <input
-                                                type="text"
-                                                name="city"
-                                                value={deliveryAddress.city}
-                                                onChange={handleCustomAddressChange}
-                                                placeholder="City"
-                                                className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
-                                            />
-                                            <input
-                                                type="text"
-                                                name="zip"
-                                                value={deliveryAddress.zip}
-                                                onChange={handleCustomAddressChange}
-                                                placeholder="ZIP"
-                                                className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
+                                <AddressSelector
+                                    user={user}
+                                    selectedAddress={deliveryAddress}
+                                    onAddressChange={setDeliveryAddress}
+                                />
                             </div>
 
                             {/* Coupon Input */}

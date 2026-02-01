@@ -2,8 +2,8 @@
   "users": [
     {
       "_id": "693bf8c719765ee4ede29aa4",
-      "name": "Param Patel",
-      "email": "parampatel2725@gmail.com",
+      "name": "Nirav Thakkar",
+      "email": "niravthakkar2020@gmail.com",
       "password": "$2b$10$HtU0T9lAhwUkz3IncToA0.GzZpOiS8fzL18BIQSH.pBNI8v9RGZiu",
       "role": "user",
       "phone": "+91 9601679921",
@@ -23,8 +23,8 @@
     },
     {
       "_id": "693bfa9819765ee4ede29abd",
-      "name": "Rajat",
-      "email": "rajatpatel@gmail.com",
+      "name": "Kushal Thakkar",
+      "email": "kushalthakkar2020@gmail.com",
       "password": "$2b$10$80q5GifxVbHoh7zIwKExo.Sfw2SCn9veNKWZZFeYAXUfXRednh5Zu",
       "role": "admin",
       "addresses": [
