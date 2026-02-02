@@ -44,7 +44,7 @@ const EventCatering = () => {
     };
 
     const calculateGrandTotal = () => {
-        return (calculateTotalPerPlate() * guestCount) + 200; // 200 Delivery Charge
+        return (calculateTotalPerPlate() * guestCount);
     };
 
     const [eventDate, setEventDate] = useState('');
@@ -83,7 +83,6 @@ const EventCatering = () => {
             guestCount: parseInt(guestCount),
             pricePerPlate: calculateTotalPerPlate(),
             totalAmount: calculateGrandTotal(),
-            deliveryCharge: 200,
             deliveryDate: eventDate // Pass selected date
         };
 
@@ -184,10 +183,6 @@ const EventCatering = () => {
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-600">Subtotal ({guestCount} guests):</span>
                                     <span className="font-medium">₹{calculateTotalPerPlate() * guestCount}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Delivery Charge:</span>
-                                    <span className="font-medium">₹200</span>
                                 </div>
                                 <div className="flex justify-between text-lg font-bold border-t border-gray-200 pt-3">
                                     <span>Total:</span>

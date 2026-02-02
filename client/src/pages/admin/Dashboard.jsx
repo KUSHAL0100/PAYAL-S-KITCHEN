@@ -75,15 +75,13 @@ const AdminDashboard = () => {
 
     // Dashboard Stats Calculation
     const stats = useMemo(() => {
-        const orderRevenue = orders.reduce((acc, order) => {
-            if (order.status === 'Pending') return acc;
+        const totalRevenue = orders.reduce((acc, order) => {
+            // Only count paid/confirmed orders towards revenue
+            if (order.status === 'Pending' || order.status === 'Rejected') return acc;
             const paid = parseFloat(order.totalAmount) || 0;
             const refund = parseFloat(order.refundAmount) || 0;
             return acc + (paid - refund);
         }, 0);
-
-        const subRevenue = subscriptions.reduce((acc, sub) => acc + (parseFloat(sub.amountPaid) || 0), 0);
-        const totalRevenue = orderRevenue + subRevenue;
 
         const totalRefunds = orders.reduce((acc, order) => acc + (parseFloat(order.refundAmount) || 0), 0);
         const totalOrders = orders.length;
@@ -805,11 +803,16 @@ const AdminDashboard = () => {
                                                 <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded">
                                                     <p><strong>Items:</strong> {order.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}</p>
                                                     {/* Show menu items if available */}
-                                                    {order.items.some(i => i.selectedItems && i.selectedItems.length > 0) && (
+                                                    {/* Show menu items if available */}
+                                                    {order.items.some(i => i.selectedItems && (i.selectedItems.name || (Array.isArray(i.selectedItems) && i.selectedItems.length > 0))) && (
                                                         <p className="mt-1 text-gray-700">
-                                                            <strong>Menu:</strong> {order.items
-                                                                .filter(i => i.selectedItems && i.selectedItems.length > 0)
-                                                                .map(i => i.selectedItems.join(', '))
+                                                            <strong>Details:</strong> {order.items
+                                                                .filter(i => i.selectedItems && (i.selectedItems.name || (Array.isArray(i.selectedItems) && i.selectedItems.length > 0)))
+                                                                .map(i => {
+                                                                    if (i.selectedItems.name) return i.selectedItems.name;
+                                                                    if (Array.isArray(i.selectedItems)) return i.selectedItems.map(si => si.name || si).join(', ');
+                                                                    return '';
+                                                                })
                                                                 .join(' | ')}
                                                         </p>
                                                     )}

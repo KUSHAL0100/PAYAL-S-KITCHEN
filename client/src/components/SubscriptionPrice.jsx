@@ -23,8 +23,13 @@ const SubscriptionPrice = ({
 
         if (remainingDays <= 0) return 0;
 
-        return Math.floor((currentSubscription.amountPaid / totalDays) * remainingDays);
+        // Formula: (PlanValue / TotalDays) * RemainingDays
+        const valueToProrate = currentSubscription.planValue || currentSubscription.amountPaid || 0;
+        const calc = Math.floor((valueToProrate / totalDays) * remainingDays);
+        return isNaN(calc) ? 0 : calc;
     };
+
+    if (!currentSubscription) return null;
 
     const multiplier = MEAL_PRICE_MULTIPLIER ?
         (MEAL_PRICE_MULTIPLIER[mealType.toUpperCase()] || 1) :
@@ -41,8 +46,6 @@ const SubscriptionPrice = ({
     const remainingDays = Math.max(0, totalDays - usedDays);
     const credit = calculateCredit();
     const payable = Math.max(0, newPrice - credit);
-
-    if (!currentSubscription) return null;
 
     return (
         <div className="mt-6 p-6 bg-gray-50 rounded-2xl border border-gray-100 shadow-inner">

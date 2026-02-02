@@ -45,7 +45,40 @@ const importData = async () => {
         if (data.plans && data.plans.length > 0) await Plan.insertMany(data.plans);
         if (data.menus && data.menus.length > 0) await Menu.insertMany(data.menus);
         if (data.subscriptions && data.subscriptions.length > 0) await Subscription.insertMany(data.subscriptions);
-        if (data.orders && data.orders.length > 0) await Order.insertMany(data.orders);
+
+        // Transform Order Data to match new Schema
+        if (data.orders && data.orders.length > 0) {
+            const transformedOrders = data.orders.map(order => {
+                // 1. Ensure top-level required 'price' exists
+                if (!order.price) {
+                    order.price = order.totalAmount; // Fallback to totalAmount if price/subtotal is missing
+                }
+
+                // 2. Transform items structure
+                if (order.items && order.items.length > 0) {
+                    order.items = order.items.map(item => {
+                        // Create details string from selectedItems and mealTime
+                        let detailsParts = [];
+                        if (item.mealTime) detailsParts.push(item.mealTime);
+
+                        if (item.selectedItems && Array.isArray(item.selectedItems)) {
+                            detailsParts.push(item.selectedItems.join(', '));
+                        } else if (item.details) {
+                            detailsParts.push(item.details);
+                        }
+
+                        // Return simplified item structure
+                        return {
+                            name: item.name,
+                            quantity: item.quantity,
+                            details: detailsParts.join(' | ') // "Lunch | Curry, Rice"
+                        };
+                    });
+                }
+                return order;
+            });
+            await Order.insertMany(transformedOrders);
+        }
         if (data.complaints && data.complaints.length > 0) await Complaint.insertMany(data.complaints);
         if (data.eventItems && data.eventItems.length > 0) await EventItem.insertMany(data.eventItems);
 

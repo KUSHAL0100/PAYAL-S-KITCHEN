@@ -88,22 +88,46 @@ const Cart = () => {
         setCouponCode('');
     };
 
-    const calculateDiscount = (subtotal) => {
-        if (!appliedCoupon) return 0;
-        return Math.round((subtotal * appliedCoupon.discountPercentage) / 100);
-    };
 
 
     // Calculate order summary values using useMemo for better performance
     const orderSummary = useMemo(() => {
-        const total = getCartTotal();
-        const delivery = cartItems.reduce((acc, item) => acc + (item.deliveryCharge || 0), 0);
-        const subtotal = total - delivery;
-        const discountAmount = calculateDiscount(subtotal);
-        const finalTotal = total - discountAmount;
+        const foodSubtotal = getCartTotal();
 
-        return { total, delivery, subtotal, discountAmount, finalTotal };
-    }, [cartItems, appliedCoupon, getCartTotal, calculateDiscount]);
+        // Specific category logic
+        const hasTiffin = cartItems.some(item => item.type === 'single_tiffin');
+        const hasEvent = cartItems.some(item => item.type === 'event');
+
+        // Tiffin Delivery Logic: ₹100 if subtotal <= 1000
+        const tiffinSubtotal = cartItems
+            .filter(item => item.type === 'single_tiffin')
+            .reduce((sum, item) => sum + (item.totalAmount || 0), 0);
+        const tiffinFee = hasTiffin && tiffinSubtotal <= 1000 ? 100 : 0;
+
+        // Event Delivery Logic: ₹200 if guests <= 30
+        const totalGuests = cartItems
+            .filter(item => item.type === 'event')
+            .reduce((sum, item) => sum + (item.guestCount || 0), 0);
+        const eventFee = hasEvent && totalGuests <= 30 ? 200 : 0;
+
+        const totalDeliveryFee = tiffinFee + eventFee;
+
+        // Discount strictly on food only
+        const discount = appliedCoupon
+            ? Math.round((foodSubtotal * appliedCoupon.discountPercentage) / 100)
+            : 0;
+
+        const finalTotal = foodSubtotal - discount + totalDeliveryFee;
+
+        return {
+            price: foodSubtotal,
+            discountAmount: discount,
+            tiffinFee,
+            eventFee,
+            deliveryFee: totalDeliveryFee,
+            finalTotal: finalTotal
+        };
+    }, [cartItems, appliedCoupon, getCartTotal]);
 
 
     const handleCheckout = async () => {
@@ -121,7 +145,7 @@ const Cart = () => {
         setError('');
 
         try {
-            const { subtotal, delivery, discountAmount, finalTotal } = orderSummary;
+            const { price, discountAmount, deliveryFee, finalTotal } = orderSummary;
 
             // 1. Create Razorpay Order Context
             const config = {
@@ -136,37 +160,34 @@ const Cart = () => {
                 config
             );
 
+            const hasEvent = cartItems.some(item => item.type === 'event');
+            const orderType = hasEvent ? 'event' : 'single';
+
             // 2. Process Payment using Hook
             await initPayment({
                 amount: orderData.amount,
                 currency: orderData.currency,
                 orderId: orderData.id,
                 user: user,
-                description: "Order Payment",
+                description: "Meal Order Payment",
                 verifyUrl: 'http://127.0.0.1:5000/api/orders/verify',
+                metadata: { deliveryAddress, type: orderType },
                 showNotification,
-                onSuccess: async (data, razorpayResponse) => {
-                    // 3. Create Database Order after successful verification
+                onSuccess: async (razorpayResponse) => {
                     // The hook handles verification POST to /api/orders/verify
-
-                    const hasEvent = cartItems.some(item => item.type === 'event');
-                    const orderType = hasEvent ? 'event' : 'single';
 
                     const dbOrderItems = cartItems.map(item => {
                         if (item.type === 'event') {
                             return {
                                 name: 'Event Catering',
                                 quantity: item.guestCount,
-                                price: item.totalAmount,
-                                selectedItems: item.items.map(i => i.name)
+                                selectedItems: { name: item.items.map(i => i.name).join(', ') }
                             };
                         } else {
                             return {
                                 name: item.name,
                                 quantity: item.quantity,
-                                price: item.price,
-                                selectedItems: item.menuItems,
-                                mealTime: item.mealTime
+                                selectedItems: { name: (item.menuItems || []).join(', ') }
                             };
                         }
                     });
@@ -181,6 +202,7 @@ const Cart = () => {
 
                     const finalOrderData = {
                         items: dbOrderItems,
+                        price: price,
                         totalAmount: finalTotal,
                         type: orderType,
                         deliveryDate: deliveryDate,
@@ -251,7 +273,7 @@ const Cart = () => {
                                                         <p className="text-sm text-gray-500">
                                                             Menu: {item.menuItems.join(', ')}
                                                         </p>
-                                                        <p className="text-gray-900 font-semibold mt-1">₹{item.totalAmount} (incl. delivery)</p>
+                                                        <p className="text-gray-900 font-semibold mt-1">₹{item.totalAmount}</p>
                                                     </div>
                                                 ) : (
                                                     <div>
@@ -372,19 +394,37 @@ const Cart = () => {
 
 
                             <div className="flex justify-between mb-2">
-                                <span className="text-gray-600">Subtotal</span>
-                                <span className="font-medium text-gray-900">₹{orderSummary.subtotal}</span>
-                            </div>
-                            <div className="flex justify-between mb-2">
-                                <span className="text-gray-600">Delivery</span>
-                                <span className="font-medium text-green-600">
-                                    {orderSummary.delivery > 0 ? `₹${orderSummary.delivery}` : 'Free'}
-                                </span>
+                                <span className="text-gray-600">Food Subtotal</span>
+                                <span className="font-medium text-gray-900">₹{orderSummary.price}</span>
                             </div>
                             {orderSummary.discountAmount > 0 && (
-                                <div className="flex justify-between mb-4 text-green-600">
+                                <div className="flex justify-between mb-2 text-green-600 font-bold">
                                     <span>Discount ({appliedCoupon.code})</span>
                                     <span>-₹{orderSummary.discountAmount}</span>
+                                </div>
+                            )}
+                            {orderSummary.tiffinFee > 0 && (
+                                <div className="flex justify-between mb-2">
+                                    <span className="text-gray-600">Delivery (Tiffin Orders)</span>
+                                    <span className="font-medium text-gray-900">₹{orderSummary.tiffinFee}</span>
+                                </div>
+                            )}
+                            {orderSummary.eventFee > 0 && (
+                                <div className="flex justify-between mb-2">
+                                    <span className="text-gray-600">Delivery (Event Catering)</span>
+                                    <span className="font-medium text-gray-900">₹{orderSummary.eventFee}</span>
+                                </div>
+                            )}
+                            {(orderSummary.tiffinFee === 0 && cartItems.some(i => i.type === 'single_tiffin')) && (
+                                <div className="flex justify-between mb-2 text-teal-600 font-bold">
+                                    <span>Delivery (Tiffin)</span>
+                                    <span>FREE</span>
+                                </div>
+                            )}
+                            {(orderSummary.eventFee === 0 && cartItems.some(i => i.type === 'event')) && (
+                                <div className="flex justify-between mb-2 text-teal-600 font-bold">
+                                    <span>Delivery (Event)</span>
+                                    <span>FREE</span>
                                 </div>
                             )}
                             <div className="border-t border-gray-200 pt-4 flex justify-between mb-6">

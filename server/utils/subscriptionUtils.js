@@ -33,8 +33,9 @@ const calculateProRataCredit = (activeSub, now = new Date()) => {
 
     if (remainingDays <= 0) return 0;
 
-    // Formula: (Amount / TotalDays) * RemainingDays
-    return Math.floor((activeSub.amountPaid / totalDays) * remainingDays);
+    // Formula: (PlanValue / TotalDays) * RemainingDays
+    const valueToProrate = activeSub.planValue || activeSub.amountPaid;
+    return Math.floor((valueToProrate / totalDays) * remainingDays);
 };
 
 /**

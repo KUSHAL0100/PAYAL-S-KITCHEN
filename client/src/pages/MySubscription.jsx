@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, AlertCircle, RefreshCw, TrendingUp, X, Info, CheckCircle } from 'lucide-react';
+import { Calendar, AlertCircle, RefreshCw, TrendingUp, X, Info, CheckCircle, ClipboardList } from 'lucide-react';
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
 import { MEAL_PRICE_MULTIPLIER } from '../utils/orderUtils';
@@ -24,14 +24,13 @@ const MySubscription = () => {
     const [editDeliveryAddress, setEditDeliveryAddress] = useState({ street: '', city: '', zip: '', country: 'India' });
     const [editLunchAddress, setEditLunchAddress] = useState({ street: '', city: '', zip: '', country: 'India' });
     const [editDinnerAddress, setEditDinnerAddress] = useState({ street: '', city: '', zip: '', country: 'India' });
+    const [useEditDualAddresses, setUseEditDualAddresses] = useState(false);
     const [selectedUpgradePlan, setSelectedUpgradePlan] = useState(null);
     const [upgradeMealType, setUpgradeMealType] = useState('both');
-    const [upgradeDeliveryAddress, setUpgradeDeliveryAddress] = useState({
-        street: '',
-        city: '',
-        zip: '',
-        country: 'India'
-    });
+    const [upgradeDeliveryAddress, setUpgradeDeliveryAddress] = useState({ street: '', city: '', zip: '', country: 'India' });
+    const [upgradeLunchAddress, setUpgradeLunchAddress] = useState({ street: '', city: '', zip: '', country: 'India' });
+    const [upgradeDinnerAddress, setUpgradeDinnerAddress] = useState({ street: '', city: '', zip: '', country: 'India' });
+    const [useUpgradeDualAddresses, setUseUpgradeDualAddresses] = useState(true);
 
     const { initPayment, loading: paymentLoading } = useRazorpay();
 
@@ -128,14 +127,23 @@ const MySubscription = () => {
         } else {
             setUpgradeDeliveryAddress({ street: '', city: '', zip: '', country: 'India' });
         }
+        setUseUpgradeDualAddresses(true);
     };
 
     const handleConfirmUpgrade = async () => {
         if (!selectedUpgradePlan) return;
 
-        if (!upgradeDeliveryAddress.street || !upgradeDeliveryAddress.city || !upgradeDeliveryAddress.zip) {
-            showNotification('Please fill in all address fields.', 'error');
-            return;
+        if (upgradeMealType === 'both' && useUpgradeDualAddresses) {
+            if (!upgradeLunchAddress.street || !upgradeLunchAddress.city || !upgradeLunchAddress.zip ||
+                !upgradeDinnerAddress.street || !upgradeDinnerAddress.city || !upgradeDinnerAddress.zip) {
+                showNotification('Please fill in all address fields for both lunch and dinner.', 'error');
+                return;
+            }
+        } else {
+            if (!upgradeDeliveryAddress.street || !upgradeDeliveryAddress.city || !upgradeDeliveryAddress.zip) {
+                showNotification('Please fill in all address fields.', 'error');
+                return;
+            }
         }
 
         setProcessingUpgrade(true);
@@ -149,8 +157,8 @@ const MySubscription = () => {
                 {
                     newPlanId: selectedUpgradePlan._id,
                     newMealType: upgradeMealType,
-                    lunchAddress: upgradeDeliveryAddress, // Using the form value as lunch address
-                    dinnerAddress: upgradeDeliveryAddress // Using the form value as dinner address
+                    lunchAddress: (upgradeMealType === 'both' && useUpgradeDualAddresses) ? upgradeLunchAddress : upgradeDeliveryAddress,
+                    dinnerAddress: (upgradeMealType === 'both' && useUpgradeDualAddresses) ? upgradeDinnerAddress : upgradeDeliveryAddress
                 },
                 config
             );
@@ -166,8 +174,8 @@ const MySubscription = () => {
                     currentSubscriptionId: orderData.currentSubscriptionId,
                     newPlanId: orderData.newPlanId,
                     newMealType: upgradeMealType,
-                    lunchAddress: upgradeDeliveryAddress,
-                    dinnerAddress: upgradeDeliveryAddress
+                    lunchAddress: (upgradeMealType === 'both' && useUpgradeDualAddresses) ? upgradeLunchAddress : upgradeDeliveryAddress,
+                    dinnerAddress: (upgradeMealType === 'both' && useUpgradeDualAddresses) ? upgradeDinnerAddress : upgradeDeliveryAddress
                 },
                 showNotification,
                 onSuccess: (data) => {
@@ -220,9 +228,8 @@ const MySubscription = () => {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             };
 
-            // Determine if using dual addresses
-            const useDualAddresses = subscription.mealType === 'both' &&
-                (editLunchAddress.street || editDinnerAddress.street);
+            // Use the explicit toggle state
+            const useDualAddresses = subscription.mealType === 'both' && useEditDualAddresses;
 
             const payload = { useDualAddresses };
 
@@ -332,8 +339,12 @@ const MySubscription = () => {
                                 </p>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Price Paid</p>
-                                <p className="text-lg font-semibold text-gray-900">₹{subscription.amountPaid}</p>
+                                <p className="text-sm text-gray-500">Plan Value</p>
+                                <p className="text-lg font-semibold text-gray-900">₹{subscription.planValue || subscription.amountPaid}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Last Payment</p>
+                                <p className="text-lg font-semibold text-gray-900 text-teal-600">₹{subscription.amountPaid}</p>
                             </div>
                             <div className="lg:col-span-2">
                                 <p className="text-sm text-gray-500 mb-2">Delivery Address</p>
@@ -400,9 +411,13 @@ const MySubscription = () => {
                                                 // Different addresses - set both
                                                 setEditLunchAddress(subscription.lunchAddress);
                                                 setEditDinnerAddress(subscription.dinnerAddress);
+                                                setUseEditDualAddresses(true);
                                             } else if (subscription.lunchAddress && subscription.lunchAddress.street) {
                                                 // Same address for both - set as delivery address
                                                 setEditDeliveryAddress(subscription.lunchAddress);
+                                                setUseEditDualAddresses(false);
+                                            } else {
+                                                setUseEditDualAddresses(false);
                                             }
                                             setIsEditAddressModalOpen(true);
                                         }}
@@ -485,8 +500,15 @@ const MySubscription = () => {
                                         {processingRenew ? 'Processing...' : 'Renew Subscription'}
                                     </button>
                                     <button
+                                        onClick={() => navigate('/orders')}
+                                        className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                                    >
+                                        <ClipboardList className="h-4 w-4 mr-2" />
+                                        View Transactions
+                                    </button>
+                                    <button
                                         onClick={handleCancel}
-                                        className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
+                                        className="inline-flex items-center px-4 py-2 border border-rose-200 shadow-sm text-sm font-medium rounded-md text-rose-700 bg-rose-50 hover:bg-rose-100"
                                     >
                                         <X className="h-4 w-4 mr-2" />
                                         Cancel Subscription
@@ -568,7 +590,7 @@ const MySubscription = () => {
                                 { id: 'lunch', label: 'Lunch Only', price: selectedUpgradePlan?.price * 0.5 },
                                 { id: 'dinner', label: 'Dinner Only', price: selectedUpgradePlan?.price * 0.5 }
                             ].map((opt) => {
-                                const isDisabled = subscription.plan._id === selectedUpgradePlan?._id &&
+                                const isDisabled = subscription.plan && subscription.plan._id === selectedUpgradePlan?._id &&
                                     (subscription.mealType === opt.id || (subscription.mealType === 'both' && opt.id !== 'both') || (opt.id !== 'both' && subscription.mealType && subscription.mealType !== opt.id));
 
                                 return (
@@ -601,6 +623,13 @@ const MySubscription = () => {
                             user={user}
                             selectedAddress={upgradeDeliveryAddress}
                             onAddressChange={setUpgradeDeliveryAddress}
+                            dualAddressMode={upgradeMealType === 'both'}
+                            useDualAddresses={useUpgradeDualAddresses}
+                            onToggleDualAddress={setUseUpgradeDualAddresses}
+                            lunchAddress={upgradeLunchAddress}
+                            dinnerAddress={upgradeDinnerAddress}
+                            onLunchAddressChange={setUpgradeLunchAddress}
+                            onDinnerAddressChange={setUpgradeDinnerAddress}
                         />
                     </div>
 
@@ -646,6 +675,8 @@ const MySubscription = () => {
                         selectedAddress={editDeliveryAddress}
                         onAddressChange={setEditDeliveryAddress}
                         dualAddressMode={subscription.mealType === 'both'}
+                        useDualAddresses={useEditDualAddresses}
+                        onToggleDualAddress={setUseEditDualAddresses}
                         lunchAddress={editLunchAddress}
                         dinnerAddress={editDinnerAddress}
                         onLunchAddressChange={setEditLunchAddress}

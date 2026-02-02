@@ -40,6 +40,7 @@ const Plans = () => {
         zip: '',
         country: 'India'
     });
+    const [useDualAddresses, setUseDualAddresses] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -107,15 +108,13 @@ const Plans = () => {
         setDeliveryAddress({ street: '', city: '', zip: '', country: 'India' });
         setLunchAddress({ street: '', city: '', zip: '', country: 'India' });
         setDinnerAddress({ street: '', city: '', zip: '', country: 'India' });
+        setUseDualAddresses(true);
     };
 
     const handleConfirmSubscribe = async () => {
         if (!selectedPlan) return;
 
-        // Validate addresses based on whether dual addressing is being used
-        const useDualAddresses = mealType === 'both' && (lunchAddress.street || dinnerAddress.street);
-
-        if (useDualAddresses) {
+        if (mealType === 'both' && useDualAddresses) {
             if (!lunchAddress.street || !lunchAddress.city || !lunchAddress.zip ||
                 !dinnerAddress.street || !dinnerAddress.city || !dinnerAddress.zip) {
                 showNotification('Please fill in all address fields for both lunch and dinner.', 'error');
@@ -142,11 +141,21 @@ const Plans = () => {
             };
 
             // Add appropriate addresses - Always ensure lunchAddress and dinnerAddress are populated
-            // If using single address mode, copy deliveryAddress to both
-            if (useDualAddresses) {
-                payload.lunchAddress = lunchAddress;
-                payload.dinnerAddress = dinnerAddress;
+            // Logic: 
+            // 1. If 'both' meals AND dual addresses enabled -> Use separate lunch/dinner addresses
+            // 2. Otherwise (either 'both' with single address OR single meal type) -> Use selected deliveryAddress for relevant slots
+
+            if (mealType === 'both') {
+                if (useDualAddresses) {
+                    payload.lunchAddress = lunchAddress;
+                    payload.dinnerAddress = dinnerAddress;
+                } else {
+                    // Critical Fix: If 'both' but NO dual address, copy main address to BOTH slots
+                    payload.lunchAddress = deliveryAddress;
+                    payload.dinnerAddress = deliveryAddress;
+                }
             } else {
+                // Single meal type cases
                 payload.lunchAddress = deliveryAddress;
                 payload.dinnerAddress = deliveryAddress;
             }
@@ -216,16 +225,16 @@ const Plans = () => {
     }
 
     // Filter and sort plans
-    const monthlyPlans = plans
-        .filter(plan => plan.duration === 'monthly')
-        .sort((a, b) => a.price - b.price);
+    const monthlyPlans = Array.isArray(plans) ? plans
+        .filter(plan => plan.duration?.toLowerCase() === 'monthly')
+        .sort((a, b) => a.price - b.price) : [];
 
-    const yearlyPlans = plans
-        .filter(plan => plan.duration === 'yearly')
-        .sort((a, b) => a.price - b.price);
+    const yearlyPlans = Array.isArray(plans) ? plans
+        .filter(plan => plan.duration?.toLowerCase() === 'yearly')
+        .sort((a, b) => a.price - b.price) : [];
 
     const PlanCard = ({ plan }) => {
-        const isCurrent = currentSubscription && currentSubscription.plan._id === plan._id;
+        const isCurrent = currentSubscription && currentSubscription.plan && currentSubscription.plan._id === plan._id;
         const isSelected = selectedPlan && selectedPlan._id === plan._id;
 
         return (
@@ -345,15 +354,17 @@ const Plans = () => {
                             ].map((opt) => {
                                 const isCurrentlyActive = currentSubscription?.plan?._id === selectedPlan?._id && currentSubscription?.mealType === opt.id;
                                 const canSelect = !isCurrentlyActive && (currentSubscription?.plan?._id !== selectedPlan?._id || opt.id === 'both');
+                                const isDisabled = currentSubscription?.plan?._id === selectedPlan?._id &&
+                                    (currentSubscription?.mealType === opt.id || (currentSubscription?.mealType === 'both' && opt.id !== 'both') || (opt.id !== 'both' && currentSubscription?.mealType && currentSubscription?.mealType !== opt.id));
 
                                 return (
                                     <div
                                         key={opt.id}
-                                        onClick={() => canSelect && setMealType(opt.id)}
+                                        onClick={() => !isDisabled && setMealType(opt.id)}
                                         className={`relative flex flex-col p-5 border-2 rounded-2xl cursor-pointer transition-all duration-300 ${mealType === opt.id
                                             ? 'border-orange-500 bg-orange-50/50 shadow-md ring-1 ring-orange-500'
                                             : 'border-gray-100 hover:border-gray-200 bg-white'
-                                            } ${!canSelect ? 'opacity-40 cursor-not-allowed grayscale' : ''}`}
+                                            } ${isDisabled ? 'opacity-40 cursor-not-allowed grayscale' : ''}`}
                                     >
                                         <div className="flex justify-between items-center mb-1">
                                             <span className={`text-sm font-black ${mealType === opt.id ? 'text-orange-900' : 'text-gray-900'}`}>{opt.label}</span>
@@ -378,6 +389,8 @@ const Plans = () => {
                             user={user}
                             selectedAddress={deliveryAddress}
                             onAddressChange={setDeliveryAddress}
+                            useDualAddresses={useDualAddresses}
+                            onToggleDualAddress={setUseDualAddresses}
                             dualAddressMode={mealType === 'both'}
                             lunchAddress={lunchAddress}
                             dinnerAddress={dinnerAddress}

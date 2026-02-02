@@ -7,6 +7,8 @@ const AddressSelector = ({
     onAddressChange,
     // New props for dual address support
     dualAddressMode = false,
+    useDualAddresses = false,
+    onToggleDualAddress,
     lunchAddress,
     dinnerAddress,
     onLunchAddressChange,
@@ -14,7 +16,6 @@ const AddressSelector = ({
 }) => {
     const [selectedAddressIndex, setSelectedAddressIndex] = useState(-1);
     const [isCustomAddress, setIsCustomAddress] = useState(false);
-    const [useDualAddresses, setUseDualAddresses] = useState(false);
     const [lunchAddressIndex, setLunchAddressIndex] = useState(-1);
     const [dinnerAddressIndex, setDinnerAddressIndex] = useState(-1);
     const [isCustomLunchAddress, setIsCustomLunchAddress] = useState(false);
@@ -22,8 +23,8 @@ const AddressSelector = ({
 
     useEffect(() => {
         // Check if dual addresses are already set
-        if (dualAddressMode && lunchAddress && dinnerAddress) {
-            setUseDualAddresses(true);
+        if (dualAddressMode && lunchAddress?.street && dinnerAddress?.street && typeof onToggleDualAddress === 'function') {
+            onToggleDualAddress(true);
         }
     }, [dualAddressMode, lunchAddress, dinnerAddress]);
 
@@ -102,7 +103,9 @@ const AddressSelector = ({
     };
 
     const handleToggleDualAddress = (enabled) => {
-        setUseDualAddresses(enabled);
+        if (onToggleDualAddress) {
+            onToggleDualAddress(enabled);
+        }
         if (!enabled && dualAddressMode) {
             // Switching back to single address - use lunch address as default if available
             if (onAddressChange && lunchAddress) {
@@ -133,7 +136,7 @@ const AddressSelector = ({
                 name="street"
                 value={address?.street || ''}
                 onChange={onChange}
-                maxLength={70}
+                maxLength={80}
                 className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                 placeholder="Street Address"
                 required

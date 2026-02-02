@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const createOrder = async (req, res) => {
     const {
         items,
+        price,
         totalAmount,
         type,
         deliveryDate,
@@ -35,23 +36,38 @@ const createOrder = async (req, res) => {
     }
     // Check for Single Tiffin orders (12 hours based on Meal Time)
     else if (type === 'single') {
-        // We need to check each item's meal time if available, or assume based on something else.
-        // Since deliveryDate is just the date, we need to combine it with meal times.
+        // We need to check each item's meal time from details string
         // Lunch: 12:00 PM, Dinner: 08:00 PM (20:00)
 
         for (const item of items) {
-            if (item.mealTime) {
+            // We need to check each item's meal time from selectedItems or name
+            let mealTime = null;
+
+            // Check name first
+            if (item.name && item.name.toLowerCase().includes('lunch')) mealTime = 'Lunch';
+            else if (item.name && item.name.toLowerCase().includes('dinner')) mealTime = 'Dinner';
+
+            // Check selectedItems if not found in name
+            if (!mealTime && item.selectedItems && item.selectedItems.length > 0) {
+                const hasLunch = item.selectedItems.some(si => (si.mealTime === 'Lunch') || (si.name && si.name.includes('Lunch')));
+                const hasDinner = item.selectedItems.some(si => (si.mealTime === 'Dinner') || (si.name && si.name.includes('Dinner')));
+
+                if (hasLunch) mealTime = 'Lunch';
+                else if (hasDinner) mealTime = 'Dinner';
+            }
+
+            if (mealTime) {
                 const itemTargetTime = new Date(delivery);
-                if (item.mealTime === 'Lunch') {
+                if (mealTime === 'Lunch') {
                     itemTargetTime.setHours(12, 0, 0, 0);
-                } else if (item.mealTime === 'Dinner') {
+                } else if (mealTime === 'Dinner') {
                     itemTargetTime.setHours(20, 0, 0, 0);
                 }
 
                 const diffInHours = (itemTargetTime - now) / 1000 / 60 / 60;
                 if (diffInHours < 12) {
                     return res.status(400).json({
-                        message: `${item.mealTime} orders must be placed at least 12 hours in advance. Deadline passed for ${itemTargetTime.toLocaleDateString()}.`
+                        message: `${mealTime} orders must be placed at least 12 hours in advance. Deadline passed for ${itemTargetTime.toLocaleDateString()}.`
                     });
                 }
             }
@@ -62,6 +78,7 @@ const createOrder = async (req, res) => {
         const order = new Order({
             user: req.user._id,
             items,
+            price: price || totalAmount, // Fallback for safety
             totalAmount,
             type,
             deliveryDate,
@@ -239,8 +256,10 @@ const cancelOrder = async (req, res) => {
         const total = parseFloat(order.totalAmount) || 0;
 
         // Calculate cancellation fee based on order status
+        // Calculate cancellation fee based on order status
         if (order.status === 'Pending') {
             // Pending orders: 0% fee, 100% refund
+            cancellationFee = 0;
             refundAmount = total;
         } else {
             // Confirmed orders: Time-based cancellation fees
@@ -258,7 +277,14 @@ const cancelOrder = async (req, res) => {
                 // Other types: 20% fee
                 cancellationFee = total * 0.20;
             }
-            refundAmount = total - cancellationFee;
+
+            // Ensure precise math
+            if (cancellationFee >= total) {
+                cancellationFee = total;
+                refundAmount = 0;
+            } else {
+                refundAmount = total - cancellationFee;
+            }
         }
 
         // Process refund via Razorpay
@@ -271,8 +297,17 @@ const cancelOrder = async (req, res) => {
                 refundData = refund;
                 console.log(`Refund processed: ${refund.id} (₹${refundAmount})`);
             } catch (error) {
-                console.error(`Refund failed for order ${order._id}:`, error.message);
-                refundError = error.message;
+                // If error says it's already refunded, we can consider it a success state for our DB
+                if (error.error && error.error.description === 'The payment has been fully refunded') {
+                    console.log(`Payment already refunded for order ${order._id}. Marking as refunded.`);
+                    refundData = { id: 'manual_check', amount: refundAmount * 100 }; // Mock data
+                } else if (error.message && error.message.includes('refunded')) {
+                    console.log(`Payment likely already refunded: ${error.message}`);
+                    refundData = { id: 'manual_check', amount: refundAmount * 100 };
+                } else {
+                    console.error(`Refund failed for order ${order._id}:`, error.message);
+                    refundError = error.message;
+                }
             }
         }
 

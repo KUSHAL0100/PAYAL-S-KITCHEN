@@ -3,21 +3,22 @@ const mongoose = require('mongoose');
 const subscriptionSchema = new mongoose.Schema({
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     plan: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan', required: true },
+    planValue: { type: Number, default: 0 }, // Market price of the plan at time of purchase
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     status: { type: String, enum: ['Active', 'Cancelled', 'Expired'], default: 'Active' },
     paymentId: { type: String },
-    amountPaid: { type: Number },
+    amountPaid: { type: Number, default: 0 }, // Actual cash paid in the latest transaction
     mealType: { type: String, enum: ['both', 'lunch', 'dinner'], default: 'both' },
     lunchAddress: {
-        street: { type: String, maxlength: 70 },
-        city: { type: String, maxlength: 30 },
-        zip: { type: String, maxlength: 10 },
+        street: { type: String, maxlength: 80, required: true },
+        city: { type: String, maxlength: 30, required: true },
+        zip: { type: String, maxlength: 10, required: true },
     },
     dinnerAddress: {
-        street: { type: String, maxlength: 70 },
-        city: { type: String, maxlength: 30 },
-        zip: { type: String, maxlength: 10 },
+        street: { type: String, maxlength: 80, required: true },
+        city: { type: String, maxlength: 30, required: true },
+        zip: { type: String, maxlength: 10, required: true },
     }
 }, { timestamps: true });
 

@@ -39,7 +39,7 @@
       "currentSubscription": "696f5ad422fc46a1a06d80ec",
       "createdAt": "2025-12-12T11:20:56.951Z",
       "updatedAt": "2026-01-20T10:37:08.366Z",
-      "__v": 1
+      "__v": 0
     }
   ],
   "plans": [
@@ -25398,29 +25398,31 @@
   ],
   "subscriptions": [
     {
-      "mealType": "both",
       "_id": "696de4f3309b416cf77c9166",
       "user": "693bfa9819765ee4ede29abd",
       "plan": "694e30355a271e4ead50484b",
+      "planValue": 0,
       "startDate": "2026-01-19T08:01:55.161Z",
       "endDate": "2026-02-19T08:01:55.161Z",
       "status": "Cancelled",
       "paymentId": "pay_S5fDsgCr6zpQOg",
       "amountPaid": 5000,
+      "mealType": "both",
       "createdAt": "2026-01-19T08:01:55.176Z",
       "updatedAt": "2026-01-19T08:06:28.587Z",
       "__v": 0
     },
     {
-      "mealType": "both",
       "_id": "696de627a1fbf1b752800c83",
       "user": "693bfa9819765ee4ede29abd",
       "plan": "694e30355a271e4ead50484d",
+      "planValue": 0,
       "startDate": "2026-01-19T08:07:03.000Z",
       "endDate": "2026-02-19T08:07:03.000Z",
       "status": "Cancelled",
       "paymentId": "pay_S5fJIoclshYQEV",
       "amountPaid": 8000,
+      "mealType": "both",
       "createdAt": "2026-01-19T08:07:03.003Z",
       "updatedAt": "2026-01-19T08:07:41.422Z",
       "__v": 0
@@ -25429,26 +25431,22 @@
       "_id": "696de6ccc0cef80cf98e8ee0",
       "user": "693bfa9819765ee4ede29abd",
       "plan": "694e30355a271e4ead50484a",
+      "planValue": 0,
       "startDate": "2026-01-19T08:09:48.428Z",
       "endDate": "2027-01-19T08:09:48.428Z",
       "status": "Cancelled",
       "paymentId": "pay_S5fMDHdb1DrpRJ",
       "amountPaid": 30000,
+      "mealType": "both",
       "createdAt": "2026-01-19T08:09:48.442Z",
       "updatedAt": "2026-01-20T10:28:09.418Z",
-      "__v": 0,
-      "mealType": "both"
+      "__v": 0
     },
     {
-      "deliveryAddress": {
-        "street": "shagun plaza",
-        "city": "ahmedabad",
-        "zip": "380015",
-        "country": "India"
-      },
       "_id": "696f5908bb95e69cd847dd14",
       "user": "693bfa9819765ee4ede29abd",
       "plan": "694e30355a271e4ead504849",
+      "planValue": 0,
       "startDate": "2026-01-20T10:29:28.980Z",
       "endDate": "2026-02-20T10:29:28.980Z",
       "status": "Cancelled",
@@ -25460,15 +25458,10 @@
       "__v": 0
     },
     {
-      "deliveryAddress": {
-        "street": "shagun plaza",
-        "city": "ahmedabad",
-        "zip": "380015",
-        "country": "India"
-      },
       "_id": "696f5ad422fc46a1a06d80ec",
       "user": "693bfa9819765ee4ede29abd",
       "plan": "694e30355a271e4ead50484c",
+      "planValue": 0,
       "startDate": "2026-01-20T10:37:08.248Z",
       "endDate": "2027-01-20T10:37:08.248Z",
       "status": "Active",
@@ -25493,24 +25486,21 @@
         {
           "name": "Basic Tiffin (Lunch)",
           "quantity": 2,
-          "price": 120,
-          "selectedItems": [
-            "Horse Gram Curry",
-            "Kaju Curry",
-            "Methi Rice",
-            "Missi Roti"
-          ],
-          "mealTime": "Lunch",
-          "_id": "696bc34d41c24d30fcf42386"
+          "details": "Lunch | Horse Gram Curry, Kaju Curry, Methi Rice, Missi Roti",
+          "_id": "69809d6a9d7efe101a7256b7"
         }
       ],
+      "price": 340,
+      "proRataCredit": 0,
+      "discountAmount": 0,
       "totalAmount": 340,
       "status": "Confirmed",
       "type": "single",
       "deliveryDate": "2026-01-29T00:00:00.000Z",
       "paymentStatus": "Paid",
       "paymentId": "pay_S51Yf3QVaJpI5k",
-      "discountAmount": 0,
+      "cancellationFee": 0,
+      "refundAmount": 0,
       "couponCode": null,
       "createdAt": "2026-01-17T17:13:49.900Z",
       "updatedAt": "2026-01-17T17:14:16.711Z",
@@ -25528,22 +25518,21 @@
         {
           "name": "Basic Tiffin (Dinner)",
           "quantity": 4,
-          "price": 120,
-          "selectedItems": [
-            "Sev Tameta Nu Shaak",
-            "Jeera Rice"
-          ],
-          "mealTime": "Dinner",
-          "_id": "696bc3f741c24d30fcf423e9"
+          "details": "Dinner | Sev Tameta Nu Shaak, Jeera Rice",
+          "_id": "69809d6a9d7efe101a7256b9"
         }
       ],
+      "price": 580,
+      "proRataCredit": 0,
+      "discountAmount": 0,
       "totalAmount": 580,
       "status": "Confirmed",
       "type": "single",
       "deliveryDate": "2026-01-21T00:00:00.000Z",
       "paymentStatus": "Paid",
       "paymentId": "pay_S51be47qslY1K2",
-      "discountAmount": 0,
+      "cancellationFee": 0,
+      "refundAmount": 0,
       "couponCode": null,
       "createdAt": "2026-01-17T17:16:39.359Z",
       "updatedAt": "2026-01-17T17:17:08.305Z",
@@ -25561,23 +25550,21 @@
         {
           "name": "Event Catering (27 Guests)",
           "quantity": 1,
-          "price": 12620,
-          "selectedItems": [
-            "Veg Manchurian",
-            "Malai Kofta",
-            "Rasmalai",
-            "Soft Drink"
-          ],
-          "_id": "696bc81a41c24d30fcf4243d"
+          "details": "Veg Manchurian, Malai Kofta, Rasmalai, Soft Drink",
+          "_id": "69809d6a9d7efe101a7256bb"
         }
       ],
+      "price": 12620,
+      "proRataCredit": 0,
+      "discountAmount": 0,
       "totalAmount": 12620,
       "status": "Pending",
       "type": "event",
       "deliveryDate": "2026-01-26T00:00:00.000Z",
       "paymentStatus": "Paid",
       "paymentId": "pay_S51uIYc2pLg6t9",
-      "discountAmount": 0,
+      "cancellationFee": 0,
+      "refundAmount": 0,
       "couponCode": null,
       "createdAt": "2026-01-17T17:34:18.990Z",
       "updatedAt": "2026-01-17T17:34:18.990Z",
@@ -25590,11 +25577,13 @@
         {
           "name": "Premium Plan (monthly)",
           "quantity": 1,
-          "price": 5000,
-          "selectedItems": [],
-          "_id": "696de4f3309b416cf77c916c"
+          "details": "",
+          "_id": "69809d6a9d7efe101a7256bd"
         }
       ],
+      "price": 5000,
+      "proRataCredit": 0,
+      "discountAmount": 0,
       "totalAmount": 5000,
       "status": "Confirmed",
       "type": "subscription_purchase",
@@ -25602,7 +25591,8 @@
       "paymentStatus": "Paid",
       "paymentId": "pay_S5fDsgCr6zpQOg",
       "subscription": "696de4f3309b416cf77c9166",
-      "discountAmount": 0,
+      "cancellationFee": 0,
+      "refundAmount": 0,
       "createdAt": "2026-01-19T08:01:55.329Z",
       "updatedAt": "2026-01-19T08:01:55.329Z",
       "__v": 0
@@ -25614,11 +25604,13 @@
         {
           "name": "Exotic Plan (monthly)",
           "quantity": 1,
-          "price": 8000,
-          "selectedItems": [],
-          "_id": "696de627a1fbf1b752800c89"
+          "details": "",
+          "_id": "69809d6a9d7efe101a7256bf"
         }
       ],
+      "price": 8000,
+      "proRataCredit": 0,
+      "discountAmount": 0,
       "totalAmount": 8000,
       "status": "Confirmed",
       "type": "subscription_purchase",
@@ -25626,7 +25618,8 @@
       "paymentStatus": "Paid",
       "paymentId": "pay_S5fJIoclshYQEV",
       "subscription": "696de627a1fbf1b752800c83",
-      "discountAmount": 0,
+      "cancellationFee": 0,
+      "refundAmount": 0,
       "createdAt": "2026-01-19T08:07:03.235Z",
       "updatedAt": "2026-01-19T08:07:03.235Z",
       "__v": 0
@@ -25638,11 +25631,13 @@
         {
           "name": "Basic Plan (yearly)",
           "quantity": 1,
-          "price": 30000,
-          "selectedItems": [],
-          "_id": "696de6ccc0cef80cf98e8ee6"
+          "details": "",
+          "_id": "69809d6a9d7efe101a7256c1"
         }
       ],
+      "price": 30000,
+      "proRataCredit": 0,
+      "discountAmount": 0,
       "totalAmount": 30000,
       "status": "Confirmed",
       "type": "subscription_purchase",
@@ -25650,7 +25645,8 @@
       "paymentStatus": "Paid",
       "paymentId": "pay_S5fMDHdb1DrpRJ",
       "subscription": "696de6ccc0cef80cf98e8ee0",
-      "discountAmount": 0,
+      "cancellationFee": 0,
+      "refundAmount": 0,
       "createdAt": "2026-01-19T08:09:48.598Z",
       "updatedAt": "2026-01-19T08:09:48.598Z",
       "__v": 0
@@ -25667,25 +25663,21 @@
         {
           "name": "Event Catering (29 Guests)",
           "quantity": 1,
-          "price": 20500,
-          "selectedItems": [
-            "Hara Bhara Kabab",
-            "Veg Manchurian",
-            "Spring Rolls",
-            "Paneer Tikka",
-            "Veg Biryani",
-            "Butter Naan"
-          ],
-          "_id": "696f43090f4581efdfaa42a3"
+          "details": "Hara Bhara Kabab, Veg Manchurian, Spring Rolls, Paneer Tikka, Veg Biryani, Butter Naan",
+          "_id": "69809d6a9d7efe101a7256c3"
         }
       ],
+      "price": 20500,
+      "proRataCredit": 0,
+      "discountAmount": 0,
       "totalAmount": 20500,
       "status": "Cancelled",
       "type": "event",
       "deliveryDate": "2026-01-23T00:00:00.000Z",
       "paymentStatus": "Paid",
       "paymentId": "pay_S64fiw5h3tFtIk",
-      "discountAmount": 0,
+      "cancellationFee": 0,
+      "refundAmount": 0,
       "couponCode": null,
       "createdAt": "2026-01-20T08:55:37.143Z",
       "updatedAt": "2026-01-20T08:56:04.830Z",
@@ -25703,24 +25695,21 @@
         {
           "name": "Exotic Tiffin (Dinner)",
           "quantity": 4,
-          "price": 200,
-          "selectedItems": [
-            "Vegetable Lasagna",
-            "Miso Soup",
-            "Three Bean Salad",
-            "Atta Ladoo"
-          ],
-          "mealTime": "Dinner",
-          "_id": "696f44420f4581efdfaa4373"
+          "details": "Dinner | Vegetable Lasagna, Miso Soup, Three Bean Salad, Atta Ladoo",
+          "_id": "69809d6a9d7efe101a7256c5"
         }
       ],
+      "price": 900,
+      "proRataCredit": 0,
+      "discountAmount": 0,
       "totalAmount": 900,
       "status": "Cancelled",
       "type": "single",
       "deliveryDate": "2026-01-24T00:00:00.000Z",
       "paymentStatus": "Paid",
       "paymentId": "pay_S64lDSa3ZXp8JZ",
-      "discountAmount": 0,
+      "cancellationFee": 0,
+      "refundAmount": 0,
       "couponCode": null,
       "createdAt": "2026-01-20T09:00:50.226Z",
       "updatedAt": "2026-01-20T09:01:47.511Z",
@@ -25738,11 +25727,13 @@
         {
           "name": "Basic Plan (monthly) - Dinner",
           "quantity": 1,
-          "price": 1500,
-          "selectedItems": [],
-          "_id": "696f5909bb95e69cd847dd1a"
+          "details": "",
+          "_id": "69809d6a9d7efe101a7256c7"
         }
       ],
+      "price": 1500,
+      "proRataCredit": 0,
+      "discountAmount": 0,
       "totalAmount": 1500,
       "status": "Confirmed",
       "type": "subscription_purchase",
@@ -25750,7 +25741,8 @@
       "paymentStatus": "Paid",
       "paymentId": "pay_S66GqC5LLzKx31",
       "subscription": "696f5908bb95e69cd847dd14",
-      "discountAmount": 0,
+      "cancellationFee": 0,
+      "refundAmount": 0,
       "createdAt": "2026-01-20T10:29:29.109Z",
       "updatedAt": "2026-01-20T10:29:29.109Z",
       "__v": 0
@@ -25767,11 +25759,13 @@
         {
           "name": "Premium Plan (yearly) - Lunch",
           "quantity": 1,
-          "price": 25000,
-          "selectedItems": [],
-          "_id": "696f5ad422fc46a1a06d80f2"
+          "details": "",
+          "_id": "69809d6a9d7efe101a7256c9"
         }
       ],
+      "price": 25000,
+      "proRataCredit": 0,
+      "discountAmount": 0,
       "totalAmount": 25000,
       "status": "Confirmed",
       "type": "subscription_purchase",
@@ -25779,7 +25773,8 @@
       "paymentStatus": "Paid",
       "paymentId": "pay_S66Oxj2RArAV6d",
       "subscription": "696f5ad422fc46a1a06d80ec",
-      "discountAmount": 0,
+      "cancellationFee": 0,
+      "refundAmount": 0,
       "createdAt": "2026-01-20T10:37:08.418Z",
       "updatedAt": "2026-01-20T10:37:08.418Z",
       "__v": 0

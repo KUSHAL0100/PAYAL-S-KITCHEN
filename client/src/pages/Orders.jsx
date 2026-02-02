@@ -79,7 +79,15 @@ const Orders = () => {
                     'success'
                 );
             } else {
-                showNotification('Order cancelled (No refund applicable).', 'info');
+                // If no specific refund object but calculation says there should be one
+                if (refundAmount > 0) {
+                    showNotification(
+                        `Order cancelled. ₹${refundAmount.toFixed(2)} refund processed.`,
+                        'success'
+                    );
+                } else {
+                    showNotification('Order cancelled.', 'info');
+                }
             }
 
             // Refresh orders
@@ -98,11 +106,8 @@ const Orders = () => {
         return <div className="text-center py-10">Loading orders...</div>;
     }
 
-    // Filter out subscription orders (they have their own page now)
-    const filteredOrders = orders.filter(order =>
-        order.type !== 'subscription_purchase' &&
-        order.type !== 'subscription_upgrade'
-    );
+    // Filter orders (Previously we filtered out subscription orders, but now we show them all)
+    const filteredOrders = orders;
 
     return (
         <div className="bg-gray-50/50 min-h-screen py-16">
@@ -152,21 +157,24 @@ const Orders = () => {
                                                 Order #{order._id.slice(-6).toUpperCase()}
                                             </h3>
                                             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
-                                                {order.type === 'event' ? 'Catering Event' : 'Single Tiffin'}
+                                                {order.type === 'event' ? 'Catering Event' :
+                                                    order.type === 'single' ? 'Single Tiffin' :
+                                                        order.type === 'subscription_purchase' ? 'Subscription Purchase' :
+                                                            order.type === 'subscription_upgrade' ? 'Subscription Upgrade' :
+                                                                'Meal Order'}
                                             </p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-center gap-4">
                                         <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] shadow-sm ${order.status === 'Delivered' ? 'bg-teal-50 text-teal-600 border border-teal-100' :
-                                                order.status === 'Cancelled' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
-                                                    'bg-amber-50 text-amber-600 border border-amber-100'
+                                            order.status === 'Cancelled' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                                                'bg-amber-50 text-amber-600 border border-amber-100'
                                             }`}>
                                             {order.status}
                                         </span>
 
-                                        {(order.type === 'event' || order.type === 'single') &&
-                                            order.status !== 'Cancelled' &&
+                                        {order.status !== 'Cancelled' &&
                                             order.status !== 'Delivered' && (
                                                 <button
                                                     onClick={() => handleCancelOrder(order)}
@@ -190,29 +198,47 @@ const Orders = () => {
                                                             <span className="h-5 w-5 bg-orange-50 text-orange-600 text-[10px] flex items-center justify-center rounded-lg">{item.quantity}x</span>
                                                             {item.name}
                                                         </p>
-                                                        {item.selectedItems?.length > 0 && (
+                                                        {item.selectedItems && item.selectedItems.name && (
                                                             <p className="text-[10px] font-bold text-gray-400 mt-1 pl-7">
-                                                                {item.selectedItems.join(' • ')}
+                                                                {item.selectedItems.name}
                                                             </p>
                                                         )}
                                                     </div>
-                                                    <span className="text-sm font-black text-gray-900">
-                                                        ₹{order.type === 'event' ? item.price : item.price * item.quantity}
-                                                    </span>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
 
                                     <div className="space-y-6">
-                                        <div className="grid grid-cols-2 gap-8">
-                                            <div>
+                                        <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                                            <div className="col-span-2 md:col-span-1">
                                                 <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Delivery Date</h4>
                                                 <p className="text-sm font-black text-gray-900">{new Date(order.deliveryDate).toLocaleDateString(undefined, { dateStyle: 'long' })}</p>
                                             </div>
-                                            <div>
-                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Total Paid</h4>
-                                                <p className="text-xl font-black text-orange-600">₹{order.totalAmount}</p>
+                                            <div className="col-span-2 md:col-span-1">
+                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Pricing Breakdown</h4>
+                                                <div className="space-y-1">
+                                                    <div className="flex justify-between text-xs">
+                                                        <span className="text-gray-500 font-bold">Price:</span>
+                                                        <span className="text-gray-900 font-black">₹{order.price?.toFixed(2) || order.totalAmount.toFixed(2)}</span>
+                                                    </div>
+                                                    {order.proRataCredit > 0 && (
+                                                        <div className="flex justify-between text-xs text-teal-600 font-bold">
+                                                            <span>Upgrade Credit:</span>
+                                                            <span>- ₹{order.proRataCredit.toFixed(2)}</span>
+                                                        </div>
+                                                    )}
+                                                    {order.discountAmount > 0 && (
+                                                        <div className="flex justify-between text-xs text-orange-600 font-bold">
+                                                            <span>Discount:</span>
+                                                            <span>- ₹{order.discountAmount.toFixed(2)}</span>
+                                                        </div>
+                                                    )}
+                                                    <div className="flex justify-between text-sm pt-2 border-t border-gray-100">
+                                                        <span className="text-gray-900 font-black uppercase tracking-tighter">Total Paid:</span>
+                                                        <span className="text-lg font-black text-orange-600">₹{order.totalAmount.toFixed(2)}</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
 

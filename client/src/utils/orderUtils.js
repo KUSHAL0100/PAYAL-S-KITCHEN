@@ -35,6 +35,8 @@ export const validateOrderTime = (orderDate, mealTime) => {
  * @returns {Object} - { cancellationFee: number, refundAmount: number, percentage: string, message: string }
  */
 export const calculateCancellationFee = (order) => {
+    const totalAmount = parseFloat(order.totalAmount) || 0;
+
     let cancellationFee = 0;
     let refundAmount = 0;
     let percentage = '0%';
@@ -42,7 +44,7 @@ export const calculateCancellationFee = (order) => {
     // Policy 1: If Pending (Admin hasn't approved), 0% cancellation fee
     if (order.status === 'Pending') {
         cancellationFee = 0;
-        refundAmount = order.totalAmount;
+        refundAmount = totalAmount;
         percentage = '0%';
     } else {
         // Time-based cancellation fees for Approved orders
@@ -62,22 +64,30 @@ export const calculateCancellationFee = (order) => {
         }
 
         if (isLateCancellation) {
-            cancellationFee = order.totalAmount; // 100% fee
+            cancellationFee = totalAmount; // 100% fee
             refundAmount = 0;
             percentage = '100%';
         } else {
-            cancellationFee = order.totalAmount * 0.20; // 20% fee
-            refundAmount = order.totalAmount * 0.80;
+            // 20% Fee calculation
+            cancellationFee = totalAmount * 0.20;
+            refundAmount = totalAmount - cancellationFee;
             percentage = '20%';
         }
     }
 
+    // Format for display
+    const feeDisplay = cancellationFee > 0 ? `₹${cancellationFee.toFixed(2)}` : '₹0.00';
+    const refundDisplay = refundAmount > 0 ? `₹${refundAmount.toFixed(2)}` : '₹0.00';
+
     const message = cancellationFee > 0
-        ? `⚠️ Cancellation Fee: ${percentage} (₹${cancellationFee.toFixed(2)})\n\n` +
-        `You will receive ₹${refundAmount.toFixed(2)} refund to your bank account.\n\n` +
-        `Are you sure you want to cancel this order?`
-        : `✅ No Cancellation Fee (Order Status: ${order.status})\n\n` +
-        `You will receive a full refund of ₹${refundAmount.toFixed(2)}.\n\n` +
+        ? `⚠️ Cancellation Fee Applies\n\n` +
+        `• Order Total: ₹${totalAmount.toFixed(2)}\n` +
+        `• Cancellation Fee (${percentage}): -${feeDisplay}\n` +
+        `• Refund Amount: ${refundDisplay}\n\n` +
+        `Are you sure you want to cancel?`
+        : `✅ Full Refund Applicable\n\n` +
+        `Total Amount: ₹${totalAmount.toFixed(2)}\n` +
+        `You will receive a full refund of ${refundDisplay}.\n\n` +
         `Are you sure you want to cancel?`;
 
     return {

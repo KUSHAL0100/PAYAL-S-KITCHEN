@@ -9,7 +9,7 @@ const userSchema = mongoose.Schema({
     phone: { type: String },
     addresses: [{
         label: { type: String, maxlength: 50 },
-        street: { type: String, maxlength: 70 },
+        street: { type: String, maxlength: 80 },
         city: { type: String, maxlength: 30 },
         zip: { type: String, maxlength: 10 },
     }],

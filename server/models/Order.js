@@ -5,23 +5,23 @@ const orderSchema = mongoose.Schema({
     items: [{
         name: String,
         quantity: Number,
-        price: Number,
-        selectedItems: [{ type: String }], // Array of strings for event item names
-        mealTime: { type: String, enum: ['Lunch', 'Dinner'] }
+        selectedItems: mongoose.Schema.Types.Mixed // Store complex items (events, menus, etc)
     }],
+    price: { type: Number, required: true },
+    proRataCredit: { type: Number, default: 0 },
+    discountAmount: { type: Number, default: 0 },
     totalAmount: { type: Number, required: true },
     status: { type: String, enum: ['Pending', 'Confirmed', 'Preparing', 'Out for Delivery', 'Delivered', 'Cancelled'], default: 'Pending' },
-    type: { type: String, enum: ['single', 'event', 'subscription_daily', 'subscription_purchase'], required: true },
+    type: { type: String, enum: ['single', 'event', 'subscription_daily', 'subscription_purchase', 'subscription_upgrade'], required: true },
     deliveryDate: { type: Date, required: true },
     deliveryAddress: {
-        street: { type: String, maxlength: 70 },
-        city: { type: String, maxlength: 30 },
-        zip: { type: String, maxlength: 10 },
+        street: { type: String, maxlength: 80, required: true },
+        city: { type: String, maxlength: 30, required: true },
+        zip: { type: String, maxlength: 10, required: true },
     },
     paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Failed'], default: 'Pending' },
     paymentId: { type: String },
     subscription: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription' },
-    discountAmount: { type: Number, default: 0 },
     cancellationFee: { type: Number, default: 0 },
     refundAmount: { type: Number, default: 0 },
     couponCode: { type: String },

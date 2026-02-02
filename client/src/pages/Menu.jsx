@@ -142,7 +142,7 @@ const Menu = () => {
     // Calculate total amount using useMemo to avoid duplication
     const totalOrderAmount = useMemo(() => {
         const price = PLAN_PRICES[selectedPlan];
-        return (price * orderQuantity) + 100; // 100 Delivery Charge
+        return (price * orderQuantity);
     }, [selectedPlan, orderQuantity]);
 
     const handleOrderNow = () => {
@@ -175,8 +175,7 @@ const Menu = () => {
             mealTime: orderMealTime,
             quantity: parseInt(orderQuantity),
             price: price,
-            deliveryCharge: 100,
-            totalAmount: totalOrderAmount,
+            totalAmount: (price * parseInt(orderQuantity)),
             menuItems: selectedDateMenu.items[orderMealTime.toLowerCase()],
             deliveryDate: orderDate // Pass selected date
         };
@@ -416,7 +415,7 @@ const Menu = () => {
                     <div className="bg-gray-900 text-white p-6 rounded-3xl shadow-2xl">
                         <div className="flex justify-between items-center text-xs opacity-60 mb-2 font-bold uppercase tracking-widest">
                             <span>{orderQuantity} Tiffin x ₹{PLAN_PRICES[selectedPlan]}</span>
-                            <span>+ ₹100 Delivery</span>
+                            <span>+ Delivery Fee (in cart)</span>
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-lg font-black uppercase tracking-tight">Total Payable</span>
@@ -433,8 +432,8 @@ const Menu = () => {
                         Add to Cart
                     </button>
                 </div>
-            </Modal>
-        </div>
+            </Modal >
+        </div >
     );
 };
 

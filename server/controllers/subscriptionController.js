@@ -98,16 +98,20 @@ const verifySubscriptionPayment = async (req, res) => {
         const selectedMealType = mealType || 'both';
         const totalValue = plan.price * subUtils.getPriceMultiplier(selectedMealType);
 
-        // 2. Handle the transition (Cancel Old Subscription)
+        // 2. Handle the transition (Cancel Old Subscription & Calculate Credit)
         const activeSub = await Subscription.findOne({
             user: req.user._id,
             status: 'Active'
         });
 
+        let upgradeDiscount = 0;
         if (activeSub) {
+            upgradeDiscount = subUtils.calculateProRataCredit(activeSub);
             activeSub.status = 'Cancelled';
             await activeSub.save();
         }
+
+        const finalPricePaid = Math.max(0, totalValue - upgradeDiscount);
 
         // 3. Set Subscription Dates
         const startDate = new Date();
@@ -117,11 +121,12 @@ const verifySubscriptionPayment = async (req, res) => {
         const subscriptionData = {
             user: req.user._id,
             plan: plan._id,
+            planValue: totalValue, // Store full market value
             startDate,
             endDate,
             status: 'Active',
             paymentId: razorpay_payment_id || 'Free Switch',
-            amountPaid: totalValue,
+            amountPaid: finalPricePaid, // Actual cash paid
             mealType: selectedMealType
         };
 
@@ -149,11 +154,20 @@ const verifySubscriptionPayment = async (req, res) => {
             items: [{
                 name: `${plan.name} Plan (${plan.duration}) - ${mealTypeLabel}`,
                 quantity: 1,
-                price: totalValue
+                name: `${plan.name} Plan (${plan.duration}) - ${mealTypeLabel}`,
+                quantity: 1,
+                selectedItems: [{
+                    name: plan.name,
+                    duration: plan.duration,
+                    mealType: mealTypeLabel,
+                    planId: plan._id
+                }]
             }],
-            totalAmount: totalValue,
+            price: totalValue,
+            proRataCredit: upgradeDiscount,
+            totalAmount: finalPricePaid,
             status: 'Confirmed',
-            type: 'subscription_purchase',
+            type: activeSub ? 'subscription_upgrade' : 'subscription_purchase',
             deliveryDate: new Date(),
             paymentStatus: 'Paid',
             paymentId: razorpay_payment_id || 'Free Switch',
@@ -290,6 +304,7 @@ const verifyRenewal = async (req, res) => {
         subscription.status = 'Active';
         subscription.paymentId = razorpay_payment_id;
         subscription.amountPaid = renewalPrice;
+        subscription.planValue = renewalPrice; // Update plan value on renewal
 
         await subscription.save();
 
@@ -307,8 +322,11 @@ const verifyRenewal = async (req, res) => {
         if (order) {
             order.paymentStatus = 'Paid';
             order.paymentId = razorpay_payment_id;
-            order.status = 'Confirmed'; // Reset status if it was cancelled
-            order.deliveryDate = new Date(); // Update delivery date to now? Or keep original? "Refresh" implies update.
+            order.status = 'Confirmed';
+            order.price = renewalPrice;
+            order.proRataCredit = 0;
+            order.totalAmount = renewalPrice;
+            order.deliveryDate = new Date();
             order.updatedAt = new Date();
             await order.save();
         }
@@ -579,19 +597,22 @@ const verifyUpgrade = async (req, res) => {
         const startDate = new Date();
         const endDate = subUtils.calculateEndDate(startDate, newPlan.duration);
 
-        // Calculate amount paid
+        // Calculate amount paid and pro-rata credits
         const selectedMealType = newMealType || 'both';
         const newAmountPaid = newPlan.price * subUtils.getPriceMultiplier(selectedMealType);
+        const upgradeDiscount = subUtils.calculateProRataCredit(currentSubscription, startDate);
+        const upgradePrice = Math.max(0, newAmountPaid - upgradeDiscount);
 
         // Prepare new subscription data
         const newSubscriptionData = {
             user: req.user._id,
             plan: newPlan._id,
+            planValue: newAmountPaid, // Store full market value
             startDate,
             endDate,
             status: 'Active',
             paymentId: razorpay_payment_id,
-            amountPaid: newAmountPaid,
+            amountPaid: upgradePrice, // Store actual cash paid
             mealType: selectedMealType
         };
 
@@ -619,8 +640,6 @@ const verifyUpgrade = async (req, res) => {
         await user.save();
 
         // Create Order record (Calculate final price paid after pro-rata discount)
-        const upgradeDiscount = subUtils.calculateProRataCredit(currentSubscription, startDate);
-        const upgradePrice = Math.max(0, newAmountPaid - upgradeDiscount);
         const mealTypeLabel = selectedMealType === 'both' ? 'Lunch + Dinner' : selectedMealType.charAt(0).toUpperCase() + selectedMealType.slice(1);
 
         const order = new Order({
@@ -628,8 +647,18 @@ const verifyUpgrade = async (req, res) => {
             items: [{
                 name: `Upgrade to ${newPlan.name} Plan (${newPlan.duration}) - ${mealTypeLabel}`,
                 quantity: 1,
-                price: upgradePrice
+                name: `Upgrade to ${newPlan.name} Plan (${newPlan.duration}) - ${mealTypeLabel}`,
+                quantity: 1,
+                selectedItems: [{
+                    name: newPlan.name,
+                    duration: newPlan.duration,
+                    mealType: mealTypeLabel,
+                    planId: newPlan._id,
+                    type: 'upgrade'
+                }]
             }],
+            price: newAmountPaid,
+            proRataCredit: upgradeDiscount,
             totalAmount: upgradePrice,
             status: 'Confirmed',
             type: 'subscription_upgrade',
@@ -664,7 +693,7 @@ const changeMealType = async (req, res) => {
         const subscription = await Subscription.findOne({
             user: req.user._id,
             status: 'Active'
-        });
+        }).populate('plan');
 
         if (!subscription) {
             return res.status(404).json({ message: 'No active subscription found' });
@@ -677,8 +706,15 @@ const changeMealType = async (req, res) => {
             });
         }
 
-        // Update meal type - pre-save hook will ensure both addresses are set appropriately
+        // Update meal type
         subscription.mealType = mealType;
+
+        // Update planValue to reflect the new meal type's market value
+        // This ensures that future upgrades/credits are calculated based on the CURRENT service level
+        const priceMultiplier = subUtils.getPriceMultiplier(mealType);
+        if (subscription.plan && subscription.plan.price) {
+            subscription.planValue = subscription.plan.price * priceMultiplier;
+        }
 
         await subscription.save(); // Pre-save hook will handle address duplication if needed
 
