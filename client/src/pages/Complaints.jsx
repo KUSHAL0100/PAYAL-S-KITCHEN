@@ -20,7 +20,7 @@ const Complaints = () => {
                         Authorization: `Bearer ${localStorage.getItem('token')}`,
                     },
                 };
-                const res = await axios.get('http://localhost:5000/api/complaints/my', config);
+                const res = await axios.get('http://127.0.0.1:5000/api/complaints/my', config);
                 setComplaints(res.data);
                 setLoading(false);
             } catch (error) {
@@ -44,7 +44,7 @@ const Complaints = () => {
                 },
             };
             const res = await axios.post(
-                'http://localhost:5000/api/complaints',
+                'http://127.0.0.1:5000/api/complaints',
                 { subject, description },
                 config
             );

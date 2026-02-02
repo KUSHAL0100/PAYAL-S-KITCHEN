@@ -42,7 +42,7 @@ const Menu = () => {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const todayRes = await axios.get(
-                `http://localhost:5000/api/menu?date=${today.toISOString()}&planType=${selectedPlan}`
+                `http://127.0.0.1:5000/api/menu?date=${today.toISOString()}&planType=${selectedPlan}`
             );
             if (todayRes.data.length > 0) {
                 setTodaysMenu(todayRes.data[0]);
@@ -57,7 +57,7 @@ const Menu = () => {
             endOfRange.setDate(endOfRange.getDate() + 14); // Fetch 2 weeks to ensure we get all weekdays
 
             const weeklyRes = await axios.get(
-                `http://localhost:5000/api/menu?startDate=${startOfMonth.toISOString()}&endDate=${endOfRange.toISOString()}&planType=${selectedPlan}`
+                `http://127.0.0.1:5000/api/menu?startDate=${startOfMonth.toISOString()}&endDate=${endOfRange.toISOString()}&planType=${selectedPlan}`
             );
 
             // Process to get one of each weekday
@@ -119,7 +119,7 @@ const Menu = () => {
                 const selectedDate = new Date(orderDate);
                 selectedDate.setHours(0, 0, 0, 0);
                 const res = await axios.get(
-                    `http://localhost:5000/api/menu?date=${selectedDate.toISOString()}&planType=${selectedPlan}`
+                    `http://127.0.0.1:5000/api/menu?date=${selectedDate.toISOString()}&planType=${selectedPlan}`
                 );
                 if (res.data.length > 0) {
                     setSelectedDateMenu(res.data[0]);

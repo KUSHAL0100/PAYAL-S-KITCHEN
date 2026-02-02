@@ -22,7 +22,7 @@ const Orders = () => {
                         Authorization: `Bearer ${localStorage.getItem('token')}`,
                     },
                 };
-                const res = await axios.get('http://localhost:5000/api/orders/myorders', config);
+                const res = await axios.get('http://127.0.0.1:5000/api/orders/myorders', config);
                 setOrders(res.data);
                 setLoading(false);
             } catch (error) {
@@ -61,7 +61,7 @@ const Orders = () => {
             };
 
             const response = await axios.put(
-                `http://localhost:5000/api/orders/${order._id}/cancel`,
+                `http://127.0.0.1:5000/api/orders/${order._id}/cancel`,
                 {},
                 config
             );
@@ -83,7 +83,7 @@ const Orders = () => {
             }
 
             // Refresh orders
-            const res = await axios.get('http://localhost:5000/api/orders/myorders', config);
+            const res = await axios.get('http://127.0.0.1:5000/api/orders/myorders', config);
             setOrders(res.data);
         } catch (error) {
             console.error('Error cancelling order:', error);

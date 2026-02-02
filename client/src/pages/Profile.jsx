@@ -80,7 +80,7 @@ const Profile = () => {
                 payload.password = formData.password;
             }
 
-            const { data } = await axios.put('http://localhost:5000/api/auth/profile', payload, config);
+            const { data } = await axios.put('http://127.0.0.1:5000/api/auth/profile', payload, config);
 
             setUser(data);
             localStorage.setItem('user', JSON.stringify(data));

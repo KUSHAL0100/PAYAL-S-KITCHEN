@@ -19,7 +19,7 @@ const EventCatering = () => {
     useEffect(() => {
         const fetchItems = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/api/event-items');
+                const res = await axios.get('http://127.0.0.1:5000/api/event-items');
                 setItems(res.data);
                 setLoading(false);
             } catch (error) {

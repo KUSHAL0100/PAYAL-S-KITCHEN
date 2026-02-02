@@ -117,7 +117,7 @@ const AdminDashboard = () => {
     // --- Plans Logic ---
     const fetchPlans = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/plans');
+            const res = await axios.get('http://127.0.0.1:5000/api/plans');
             setPlans(res.data);
         } catch (error) {
             console.error('Error fetching plans:', error);
@@ -140,10 +140,10 @@ const AdminDashboard = () => {
             };
 
             if (editingPlan) {
-                await axios.put(`http://localhost:5000/api/plans/${editingPlan._id}`, payload, config);
+                await axios.put(`http://127.0.0.1:5000/api/plans/${editingPlan._id}`, payload, config);
                 showNotification('Plan updated successfully', 'success');
             } else {
-                await axios.post('http://localhost:5000/api/plans', payload, config);
+                await axios.post('http://127.0.0.1:5000/api/plans', payload, config);
                 showNotification('Plan created successfully', 'success');
             }
 
@@ -161,7 +161,7 @@ const AdminDashboard = () => {
             const config = {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             };
-            await axios.delete(`http://localhost:5000/api/plans/${id}`, config);
+            await axios.delete(`http://127.0.0.1:5000/api/plans/${id}`, config);
             fetchPlans();
             showNotification('Plan deleted successfully', 'success');
         } catch (error) {
@@ -205,7 +205,7 @@ const AdminDashboard = () => {
             const config = {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             };
-            const res = await axios.get('http://localhost:5000/api/orders', config);
+            const res = await axios.get('http://127.0.0.1:5000/api/orders', config);
             setOrders(res.data);
             setLoadingOrders(false);
         } catch (error) {
@@ -220,7 +220,7 @@ const AdminDashboard = () => {
             const config = {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             };
-            await axios.put(`http://localhost:5000/api/orders/${orderId}/status`, { status: newStatus }, config);
+            await axios.put(`http://127.0.0.1:5000/api/orders/${orderId}/status`, { status: newStatus }, config);
 
             // Optimistic update
             setOrders(orders.map(order =>
@@ -249,7 +249,7 @@ const AdminDashboard = () => {
             const config = {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             };
-            const res = await axios.get('http://localhost:5000/api/complaints', config);
+            const res = await axios.get('http://127.0.0.1:5000/api/complaints', config);
             setComplaints(res.data);
             setLoadingComplaints(false);
         } catch (error) {
@@ -277,7 +277,7 @@ const AdminDashboard = () => {
             const config = {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             };
-            await axios.put(`http://localhost:5000/api/complaints/${selectedComplaint._id}`, {
+            await axios.put(`http://127.0.0.1:5000/api/complaints/${selectedComplaint._id}`, {
                 resolution: replyText,
                 status: 'Resolved'
             }, config);
@@ -299,7 +299,7 @@ const AdminDashboard = () => {
     const fetchCoupons = async () => {
         try {
             const config = { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } };
-            const res = await axios.get('http://localhost:5000/api/coupons', config);
+            const res = await axios.get('http://127.0.0.1:5000/api/coupons', config);
             setCoupons(res.data);
         } catch (error) {
             console.error('Error fetching coupons:', error);
@@ -310,7 +310,7 @@ const AdminDashboard = () => {
         e.preventDefault();
         try {
             const config = { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } };
-            await axios.post('http://localhost:5000/api/coupons', {
+            await axios.post('http://127.0.0.1:5000/api/coupons', {
                 ...couponFormData,
                 discountPercentage: parseInt(couponFormData.discountPercentage)
             }, config);
@@ -328,7 +328,7 @@ const AdminDashboard = () => {
         if (!window.confirm('Delete this coupon?')) return;
         try {
             const config = { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } };
-            await axios.delete(`http://localhost:5000/api/coupons/${id}`, config);
+            await axios.delete(`http://127.0.0.1:5000/api/coupons/${id}`, config);
             showNotification('Coupon deleted', 'success');
             fetchCoupons();
         } catch (error) {
@@ -342,7 +342,7 @@ const AdminDashboard = () => {
         setLoadingSubscriptions(true);
         try {
             const config = { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } };
-            const res = await axios.get('http://localhost:5000/api/subscriptions', config);
+            const res = await axios.get('http://127.0.0.1:5000/api/subscriptions', config);
             setSubscriptions(res.data);
             setLoadingSubscriptions(false);
         } catch (error) {
@@ -355,7 +355,7 @@ const AdminDashboard = () => {
         if (!window.confirm('Are you sure you want to cancel this user\'s subscription?\nThis will process a pro-rata refund if applicable.')) return;
         try {
             const config = { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } };
-            await axios.put(`http://localhost:5000/api/subscriptions/${id}/cancel`, {}, config);
+            await axios.put(`http://127.0.0.1:5000/api/subscriptions/${id}/cancel`, {}, config);
             showNotification('Subscription cancelled successfully', 'success');
             fetchSubscriptions();
         } catch (error) {
@@ -368,7 +368,7 @@ const AdminDashboard = () => {
     const fetchMenu = async () => {
         setLoadingMenu(true);
         try {
-            const res = await axios.get(`http://localhost:5000/api/menu?date=${selectedDate}&planType=${selectedPlanType}`);
+            const res = await axios.get(`http://127.0.0.1:5000/api/menu?date=${selectedDate}&planType=${selectedPlanType}`);
             if (res.data && res.data.length > 0) {
                 setDailyMenu(res.data[0]);
             } else {
@@ -396,10 +396,10 @@ const AdminDashboard = () => {
             };
 
             if (dailyMenu) {
-                await axios.put(`http://localhost:5000/api/menu/${dailyMenu._id}`, payload, config);
+                await axios.put(`http://127.0.0.1:5000/api/menu/${dailyMenu._id}`, payload, config);
                 showNotification('Menu updated successfully', 'success');
             } else {
-                await axios.post('http://localhost:5000/api/menu', payload, config);
+                await axios.post('http://127.0.0.1:5000/api/menu', payload, config);
                 showNotification('Menu created successfully', 'success');
             }
             setIsMenuModalOpen(false);
@@ -414,7 +414,7 @@ const AdminDashboard = () => {
         if (!dailyMenu || !window.confirm('Delete this menu?')) return;
         try {
             const config = { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } };
-            await axios.delete(`http://localhost:5000/api/menu/${dailyMenu._id}`, config);
+            await axios.delete(`http://127.0.0.1:5000/api/menu/${dailyMenu._id}`, config);
             showNotification('Menu deleted', 'success');
             setDailyMenu(null);
         } catch (error) {

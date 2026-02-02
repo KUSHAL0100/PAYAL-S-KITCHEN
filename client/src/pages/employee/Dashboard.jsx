@@ -16,7 +16,7 @@ const EmployeeDashboard = () => {
                     },
                 };
                 // Fetching all orders for demo purposes, filtering client side or just showing all
-                const res = await axios.get('http://localhost:5000/api/orders', config);
+                const res = await axios.get('http://127.0.0.1:5000/api/orders', config);
                 setTasks(res.data);
                 setLoading(false);
             } catch (error) {
@@ -35,7 +35,7 @@ const EmployeeDashboard = () => {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
                 },
             };
-            await axios.put(`http://localhost:5000/api/orders/${id}/status`, { status }, config);
+            await axios.put(`http://127.0.0.1:5000/api/orders/${id}/status`, { status }, config);
             setTasks(tasks.map(task => task._id === id ? { ...task, status } : task));
         } catch (error) {
             console.error('Error updating status:', error);

@@ -44,7 +44,7 @@ const Plans = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/api/plans');
+                const res = await axios.get('http://127.0.0.1:5000/api/plans');
                 setPlans(res.data);
 
                 // Fetch current subscription if user is logged in
@@ -53,7 +53,7 @@ const Plans = () => {
                         const config = {
                             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
                         };
-                        const subRes = await axios.get('http://localhost:5000/api/subscriptions/me', config);
+                        const subRes = await axios.get('http://127.0.0.1:5000/api/subscriptions/me', config);
                         setCurrentSubscription(subRes.data);
                     } catch (error) {
                         // No active subscription, that's okay
@@ -153,7 +153,7 @@ const Plans = () => {
 
             // 1. Initiate Subscription (Creation/Calculation)
             const { data: orderData } = await axios.post(
-                'http://localhost:5000/api/subscriptions',
+                'http://127.0.0.1:5000/api/subscriptions',
                 payload,
                 config
             );
@@ -171,7 +171,7 @@ const Plans = () => {
                     dinnerAddress: payload.dinnerAddress
                 };
 
-                await axios.post('http://localhost:5000/api/subscriptions/verify', verifyPayload, config);
+                await axios.post('http://127.0.0.1:5000/api/subscriptions/verify', verifyPayload, config);
 
                 showNotification('Subscription upgraded successfully! (Free upgrade)', 'success');
                 navigate('/my-subscription');
@@ -192,7 +192,7 @@ const Plans = () => {
                 orderId: orderData.orderId,
                 user: user,
                 description: `Subscribe to ${selectedPlan.name} (${selectedPlan.duration})`,
-                verifyUrl: 'http://localhost:5000/api/subscriptions/verify',
+                verifyUrl: 'http://127.0.0.1:5000/api/subscriptions/verify',
                 metadata: paymentMetadata,
                 showNotification,
                 onSuccess: (data) => {

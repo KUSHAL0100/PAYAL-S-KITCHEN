@@ -48,7 +48,7 @@ const Cart = () => {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
                 },
             };
-            const { data } = await axios.get('http://localhost:5000/api/coupons/active', config);
+            const { data } = await axios.get('http://127.0.0.1:5000/api/coupons/active', config);
             setAvailableCoupons(data);
         } catch (error) {
             console.error('Error fetching coupons:', error);
@@ -67,7 +67,7 @@ const Cart = () => {
                 },
             };
             const { data } = await axios.post(
-                'http://localhost:5000/api/coupons/validate',
+                'http://127.0.0.1:5000/api/coupons/validate',
                 { code: couponCode },
                 config
             );
@@ -131,7 +131,7 @@ const Cart = () => {
             };
 
             const { data: orderData } = await axios.post(
-                'http://localhost:5000/api/orders/razorpay',
+                'http://127.0.0.1:5000/api/orders/razorpay',
                 { amount: finalTotal },
                 config
             );
@@ -143,7 +143,7 @@ const Cart = () => {
                 orderId: orderData.id,
                 user: user,
                 description: "Order Payment",
-                verifyUrl: 'http://localhost:5000/api/orders/verify',
+                verifyUrl: 'http://127.0.0.1:5000/api/orders/verify',
                 showNotification,
                 onSuccess: async (data, razorpayResponse) => {
                     // 3. Create Database Order after successful verification
@@ -191,7 +191,7 @@ const Cart = () => {
                         couponCode: appliedCoupon ? appliedCoupon.code : null
                     };
 
-                    await axios.post('http://localhost:5000/api/orders', finalOrderData, config);
+                    await axios.post('http://127.0.0.1:5000/api/orders', finalOrderData, config);
 
                     clearCart();
                     showNotification('Order placed successfully!', 'success');
