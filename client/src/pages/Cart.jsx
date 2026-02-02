@@ -173,8 +173,9 @@ const Cart = () => {
                 verifyUrl: 'http://127.0.0.1:5000/api/orders/verify',
                 metadata: { deliveryAddress, type: orderType },
                 showNotification,
-                onSuccess: async (razorpayResponse) => {
+                onSuccess: async (verificationData, razorpayRawResponse) => {
                     // The hook handles verification POST to /api/orders/verify
+                    // Note: verificationData is from backend, razorpayRawResponse is from SDK (has payment_id)
 
                     const dbOrderItems = cartItems.map(item => {
                         if (item.type === 'event') {
@@ -207,7 +208,7 @@ const Cart = () => {
                         type: orderType,
                         deliveryDate: deliveryDate,
                         deliveryAddress: deliveryAddress,
-                        paymentId: razorpayResponse.razorpay_payment_id,
+                        paymentId: razorpayRawResponse.razorpay_payment_id,
                         paymentStatus: 'Paid',
                         discountAmount: discountAmount,
                         couponCode: appliedCoupon ? appliedCoupon.code : null

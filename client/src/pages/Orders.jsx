@@ -238,6 +238,14 @@ const Orders = () => {
                                                         <span className="text-gray-900 font-black uppercase tracking-tighter">Total Paid:</span>
                                                         <span className="text-lg font-black text-orange-600">₹{order.totalAmount.toFixed(2)}</span>
                                                     </div>
+                                                    {/* Payment ID Display */}
+                                                    {order.paymentId && (
+                                                        <div className="mt-2 pt-2 border-t border-gray-100">
+                                                            <p className="text-[9px] text-gray-400 font-mono uppercase">
+                                                                Txn ID: <span className="text-gray-600 font-bold">{order.paymentId}</span>
+                                                            </p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
