@@ -103,7 +103,7 @@ VITE_RAZORPAY_KEY_ID=your_razorpay_key_id
 ```bash
 cd server
 npm install
-node seeder.js # Seeds plans, menus, and event items
+node importData.js 
 npm run dev
 ```
 
