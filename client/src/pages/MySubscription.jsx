@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, AlertCircle, RefreshCw, TrendingUp, X, Info } from 'lucide-react';
+import { Calendar, AlertCircle, RefreshCw, TrendingUp, X, Info, CheckCircle } from 'lucide-react';
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
+import { MEAL_PRICE_MULTIPLIER } from '../utils/orderUtils';
 import AddressSelector from '../components/AddressSelector';
 import Modal from '../components/Modal';
 import SubscriptionPrice from '../components/SubscriptionPrice';
@@ -19,6 +20,10 @@ const MySubscription = () => {
     const [availableUpgrades, setAvailableUpgrades] = useState([]);
     const [processingRenew, setProcessingRenew] = useState(false);
     const [processingUpgrade, setProcessingUpgrade] = useState(false);
+    const [isEditAddressModalOpen, setIsEditAddressModalOpen] = useState(false);
+    const [editDeliveryAddress, setEditDeliveryAddress] = useState({ street: '', city: '', zip: '', country: 'India' });
+    const [editLunchAddress, setEditLunchAddress] = useState({ street: '', city: '', zip: '', country: 'India' });
+    const [editDinnerAddress, setEditDinnerAddress] = useState({ street: '', city: '', zip: '', country: 'India' });
     const [selectedUpgradePlan, setSelectedUpgradePlan] = useState(null);
     const [upgradeMealType, setUpgradeMealType] = useState('both');
     const [upgradeDeliveryAddress, setUpgradeDeliveryAddress] = useState({
@@ -113,12 +118,12 @@ const MySubscription = () => {
         setSelectedUpgradePlan(plan);
         setUpgradeMealType('both');
         // Pre-fill address from current subscription if available
-        if (subscription && subscription.deliveryAddress) {
+        if (subscription && subscription.lunchAddress) {
             setUpgradeDeliveryAddress({
-                street: subscription.deliveryAddress.street || '',
-                city: subscription.deliveryAddress.city || '',
-                zip: subscription.deliveryAddress.zip || '',
-                country: subscription.deliveryAddress.country || 'India'
+                street: subscription.lunchAddress.street || '',
+                city: subscription.lunchAddress.city || '',
+                zip: subscription.lunchAddress.zip || '',
+                country: subscription.lunchAddress.country || 'India'
             });
         } else {
             setUpgradeDeliveryAddress({ street: '', city: '', zip: '', country: 'India' });
@@ -144,7 +149,8 @@ const MySubscription = () => {
                 {
                     newPlanId: selectedUpgradePlan._id,
                     newMealType: upgradeMealType,
-                    newDeliveryAddress: upgradeDeliveryAddress
+                    lunchAddress: upgradeDeliveryAddress, // Using the form value as lunch address
+                    dinnerAddress: upgradeDeliveryAddress // Using the form value as dinner address
                 },
                 config
             );
@@ -160,7 +166,8 @@ const MySubscription = () => {
                     currentSubscriptionId: orderData.currentSubscriptionId,
                     newPlanId: orderData.newPlanId,
                     newMealType: upgradeMealType,
-                    newDeliveryAddress: upgradeDeliveryAddress
+                    lunchAddress: upgradeDeliveryAddress,
+                    dinnerAddress: upgradeDeliveryAddress
                 },
                 showNotification,
                 onSuccess: (data) => {
@@ -204,6 +211,45 @@ const MySubscription = () => {
         } catch (error) {
             console.error('Error cancelling subscription:', error);
             showNotification('Failed to cancel subscription', 'error');
+        }
+    };
+
+    const handleUpdateAddresses = async () => {
+        try {
+            const config = {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+            };
+
+            // Determine if using dual addresses
+            const useDualAddresses = subscription.mealType === 'both' &&
+                (editLunchAddress.street || editDinnerAddress.street);
+
+            const payload = { useDualAddresses };
+
+            if (useDualAddresses) {
+                if (!editLunchAddress.street || !editLunchAddress.city || !editLunchAddress.zip ||
+                    !editDinnerAddress.street || !editDinnerAddress.city || !editDinnerAddress.zip) {
+                    showNotification('Please fill in all address fields for both lunch and dinner.', 'error');
+                    return;
+                }
+                payload.lunchAddress = editLunchAddress;
+                payload.dinnerAddress = editDinnerAddress;
+            } else {
+                if (!editDeliveryAddress.street || !editDeliveryAddress.city || !editDeliveryAddress.zip) {
+                    showNotification('Please fill in all address fields.', 'error');
+                    return;
+                }
+                payload.deliveryAddress = editDeliveryAddress;
+            }
+
+            await axios.put('http://localhost:5000/api/subscriptions/update-addresses', payload, config);
+
+            showNotification('Delivery addresses updated successfully!', 'success');
+            setIsEditAddressModalOpen(false);
+            fetchSubscriptionData();
+        } catch (error) {
+            console.error('Error updating addresses:', error);
+            showNotification('Failed to update addresses', 'error');
         }
     };
 
@@ -289,13 +335,82 @@ const MySubscription = () => {
                                 <p className="text-sm text-gray-500">Price Paid</p>
                                 <p className="text-lg font-semibold text-gray-900">₹{subscription.amountPaid}</p>
                             </div>
-                            <div>
-                                <p className="text-sm text-gray-500">Delivery Address</p>
-                                <p className="text-sm font-medium text-gray-900">
-                                    {subscription.deliveryAddress ?
-                                        `${subscription.deliveryAddress.street}, ${subscription.deliveryAddress.city}, ${subscription.deliveryAddress.zip}` :
-                                        'Not provided'}
-                                </p>
+                            <div className="lg:col-span-2">
+                                <p className="text-sm text-gray-500 mb-2">Delivery Address</p>
+                                {(() => {
+                                    // Helper logic to determine what to display
+                                    const hasLunch = subscription.lunchAddress && subscription.lunchAddress.street;
+                                    const hasDinner = subscription.dinnerAddress && subscription.dinnerAddress.street;
+
+                                    if (hasLunch && hasDinner) {
+                                        // Both exist - check if they are different
+                                        const isDifferent = subscription.lunchAddress.street !== subscription.dinnerAddress.street ||
+                                            subscription.lunchAddress.city !== subscription.dinnerAddress.city;
+
+                                        if (isDifferent) {
+                                            return (
+                                                <div className="space-y-2">
+                                                    <div className="flex items-start">
+                                                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-orange-100 text-orange-800 mr-2">Lunch</span>
+                                                        <p className="text-sm font-medium text-gray-900">
+                                                            {subscription.lunchAddress.street}, {subscription.lunchAddress.city}, {subscription.lunchAddress.zip}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-blue-100 text-blue-800 mr-2">Dinner</span>
+                                                        <p className="text-sm font-medium text-gray-900">
+                                                            {subscription.dinnerAddress.street}, {subscription.dinnerAddress.city}, {subscription.dinnerAddress.zip}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        } else {
+                                            // Same address
+                                            return (
+                                                <p className="text-sm font-medium text-gray-900">
+                                                    {subscription.lunchAddress.street}, {subscription.lunchAddress.city}, {subscription.lunchAddress.zip}
+                                                </p>
+                                            );
+                                        }
+                                    } else if (hasLunch) {
+                                        // Only Lunch
+                                        return (
+                                            <p className="text-sm font-medium text-gray-900">
+                                                {subscription.lunchAddress.street}, {subscription.lunchAddress.city}, {subscription.lunchAddress.zip}
+                                            </p>
+                                        );
+                                    } else if (hasDinner) {
+                                        // Only Dinner
+                                        return (
+                                            <p className="text-sm font-medium text-gray-900">
+                                                {subscription.dinnerAddress.street}, {subscription.dinnerAddress.city}, {subscription.dinnerAddress.zip}
+                                            </p>
+                                        );
+                                    } else {
+                                        return <p className="text-sm font-medium text-gray-900">Not provided</p>;
+                                    }
+                                })()}
+                                {subscription.status === 'Active' && (
+                                    <button
+                                        onClick={() => {
+                                            if (subscription.lunchAddress && subscription.lunchAddress.street &&
+                                                subscription.dinnerAddress && subscription.dinnerAddress.street &&
+                                                (subscription.lunchAddress.street !== subscription.dinnerAddress.street ||
+                                                    subscription.lunchAddress.city !== subscription.dinnerAddress.city)) {
+                                                // Different addresses - set both
+                                                setEditLunchAddress(subscription.lunchAddress);
+                                                setEditDinnerAddress(subscription.dinnerAddress);
+                                            } else if (subscription.lunchAddress && subscription.lunchAddress.street) {
+                                                // Same address for both - set as delivery address
+                                                setEditDeliveryAddress(subscription.lunchAddress);
+                                            }
+                                            setIsEditAddressModalOpen(true);
+                                        }}
+                                        className="mt-2 text-xs text-orange-600 hover:text-orange-700 font-bold underline"
+                                    >
+                                        Edit Addresses
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -318,9 +433,17 @@ const MySubscription = () => {
                                                     }
 
                                                     const isDowngrade = subscription.mealType === 'both' && type !== 'both';
-                                                    const confirmMessage = isDowngrade
-                                                        ? `Are you sure you want to switch to ${type.toUpperCase()} only? No refund will be given for the removed meal portion.`
-                                                        : `Are you sure you want to switch your subscription meal timing to ${type.toUpperCase()}?`;
+                                                    let confirmMessage = '';
+
+                                                    if (isDowngrade) {
+                                                        if (type === 'lunch') {
+                                                            confirmMessage = `Are you sure you want to switch to LUNCH only? No refund will be given for the removed meal portion. Your current delivery address will be preserved for lunch deliveries.`;
+                                                        } else {
+                                                            confirmMessage = `Are you sure you want to switch to DINNER only? No refund will be given for the removed meal portion. Your current delivery address will be preserved for dinner deliveries.`;
+                                                        }
+                                                    } else {
+                                                        confirmMessage = `Are you sure you want to switch your subscription meal timing to ${type.toUpperCase()}? Your delivery address will be preserved.`;
+                                                    }
 
                                                     if (!window.confirm(confirmMessage)) return;
 
@@ -346,6 +469,9 @@ const MySubscription = () => {
                                     </div>
                                     <p className="mt-2 text-xs text-gray-500 italic">
                                         * You can switch to a single meal option at any time, but no refund is provided for the removed meal portion.
+                                    </p>
+                                    <p className="mt-1 text-xs text-blue-600 font-medium">
+                                        📍 Your delivery address will be automatically preserved when switching meal types.
                                     </p>
                                 </div>
 
@@ -484,6 +610,7 @@ const MySubscription = () => {
                             selectedPlan={selectedUpgradePlan}
                             currentSubscription={subscription}
                             mealType={upgradeMealType}
+                            MEAL_PRICE_MULTIPLIER={MEAL_PRICE_MULTIPLIER}
                         />
                     )}
 
@@ -495,6 +622,48 @@ const MySubscription = () => {
                             className={`w-full inline-flex justify-center items-center rounded-2xl border border-transparent shadow-xl px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-sm font-black text-white hover:from-orange-600 hover:to-orange-700 transition-all duration-300 transform active:scale-95 disabled:opacity-50`}
                         >
                             {paymentLoading || processingUpgrade ? 'Processing...' : 'Proceed to Payment'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Edit Address Modal */}
+            <Modal
+                isOpen={isEditAddressModalOpen}
+                onClose={() => setIsEditAddressModalOpen(false)}
+                title="Edit Delivery Address"
+                maxWidth="sm:max-w-2xl"
+            >
+                <div>
+                    <p className="text-sm text-gray-500 mb-6 flex items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <Info className="w-4 h-4 mr-2 text-orange-500" />
+                        Update your delivery address below.  {subscription.mealType === 'both' &&
+                            'You can specify separate addresses for lunch and dinner if needed.'}
+                    </p>
+
+                    <AddressSelector
+                        user={user}
+                        selectedAddress={editDeliveryAddress}
+                        onAddressChange={setEditDeliveryAddress}
+                        dualAddressMode={subscription.mealType === 'both'}
+                        lunchAddress={editLunchAddress}
+                        dinnerAddress={editDinnerAddress}
+                        onLunchAddressChange={setEditLunchAddress}
+                        onDinnerAddressChange={setEditDinnerAddress}
+                    />
+
+                    <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                        <button
+                            onClick={handleUpdateAddresses}
+                            className="flex-1 inline-flex justify-center items-center rounded-2xl border border-transparent shadow-xl px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-sm font-black text-white hover:from-orange-600 hover:to-orange-700 transition-all duration-300 transform active:scale-95"
+                        >
+                            Save Address
+                        </button>
+                        <button
+                            onClick={() => setIsEditAddressModalOpen(false)}
+                            className="flex-1 inline-flex justify-center items-center rounded-2xl border border-gray-300 shadow px-8 py-4 bg-white text-sm font-black text-gray-700 hover:bg-gray-50 transition-all duration-300"
+                        >
+                            Cancel
                         </button>
                     </div>
                 </div>

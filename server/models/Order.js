@@ -14,9 +14,9 @@ const orderSchema = mongoose.Schema({
     type: { type: String, enum: ['single', 'event', 'subscription_daily', 'subscription_purchase'], required: true },
     deliveryDate: { type: Date, required: true },
     deliveryAddress: {
-        street: String,
-        city: String,
-        zip: String,
+        street: { type: String, maxlength: 70 },
+        city: { type: String, maxlength: 30 },
+        zip: { type: String, maxlength: 10 },
     },
     paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Failed'], default: 'Pending' },
     paymentId: { type: String },

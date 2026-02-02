@@ -239,6 +239,7 @@ const Profile = () => {
                                                             type="text"
                                                             value={addr.label}
                                                             onChange={(e) => handleAddressChange(index, 'label', e.target.value)}
+                                                            maxLength={50}
                                                             className="w-full px-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-black text-gray-900 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500/50 outline-none transition-all"
                                                             placeholder="Home, Office..."
                                                         />
@@ -249,6 +250,7 @@ const Profile = () => {
                                                             type="text"
                                                             value={addr.street}
                                                             onChange={(e) => handleAddressChange(index, 'street', e.target.value)}
+                                                            maxLength={70}
                                                             className="w-full px-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-black text-gray-900 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500/50 outline-none transition-all"
                                                             placeholder="123 Main St"
                                                         />
@@ -259,6 +261,7 @@ const Profile = () => {
                                                             type="text"
                                                             value={addr.city}
                                                             onChange={(e) => handleAddressChange(index, 'city', e.target.value)}
+                                                            maxLength={30}
                                                             className="w-full px-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-black text-gray-900 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500/50 outline-none transition-all"
                                                             placeholder="City Name"
                                                         />
@@ -269,6 +272,7 @@ const Profile = () => {
                                                             type="text"
                                                             value={addr.zip}
                                                             onChange={(e) => handleAddressChange(index, 'zip', e.target.value)}
+                                                            maxLength={10}
                                                             className="w-full px-4 py-2 bg-white border border-gray-100 rounded-xl text-xs font-black text-gray-900 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500/50 outline-none transition-all"
                                                             placeholder="000000"
                                                         />

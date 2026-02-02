@@ -28,6 +28,18 @@ const Plans = () => {
         zip: '',
         country: 'India'
     });
+    const [lunchAddress, setLunchAddress] = useState({
+        street: '',
+        city: '',
+        zip: '',
+        country: 'India'
+    });
+    const [dinnerAddress, setDinnerAddress] = useState({
+        street: '',
+        city: '',
+        zip: '',
+        country: 'India'
+    });
 
     useEffect(() => {
         const fetchData = async () => {
@@ -93,14 +105,27 @@ const Plans = () => {
         setSelectedPlan(plan);
         setMealType('both'); // Default
         setDeliveryAddress({ street: '', city: '', zip: '', country: 'India' });
+        setLunchAddress({ street: '', city: '', zip: '', country: 'India' });
+        setDinnerAddress({ street: '', city: '', zip: '', country: 'India' });
     };
 
     const handleConfirmSubscribe = async () => {
         if (!selectedPlan) return;
 
-        if (!deliveryAddress.street || !deliveryAddress.city || !deliveryAddress.zip) {
-            showNotification('Please fill in all address fields.', 'error');
-            return;
+        // Validate addresses based on whether dual addressing is being used
+        const useDualAddresses = mealType === 'both' && (lunchAddress.street || dinnerAddress.street);
+
+        if (useDualAddresses) {
+            if (!lunchAddress.street || !lunchAddress.city || !lunchAddress.zip ||
+                !dinnerAddress.street || !dinnerAddress.city || !dinnerAddress.zip) {
+                showNotification('Please fill in all address fields for both lunch and dinner.', 'error');
+                return;
+            }
+        } else {
+            if (!deliveryAddress.street || !deliveryAddress.city || !deliveryAddress.zip) {
+                showNotification('Please fill in all address fields.', 'error');
+                return;
+            }
         }
 
         try {
@@ -110,30 +135,65 @@ const Plans = () => {
                 },
             };
 
-            // 1. Initiate Subscription
+            // Prepare payload
+            const payload = {
+                planId: selectedPlan._id,
+                mealType
+            };
+
+            // Add appropriate addresses - Always ensure lunchAddress and dinnerAddress are populated
+            // If using single address mode, copy deliveryAddress to both
+            if (useDualAddresses) {
+                payload.lunchAddress = lunchAddress;
+                payload.dinnerAddress = dinnerAddress;
+            } else {
+                payload.lunchAddress = deliveryAddress;
+                payload.dinnerAddress = deliveryAddress;
+            }
+
+            // 1. Initiate Subscription (Creation/Calculation)
             const { data: orderData } = await axios.post(
-                'http://localhost:5000/api/subscriptions/subscribe-init',
-                {
-                    planId: selectedPlan._id,
-                    mealType,
-                    deliveryAddress
-                },
+                'http://localhost:5000/api/subscriptions',
+                payload,
                 config
             );
 
-            // 2. Process Payment using Hook
+            // HANDLE FREE SWITCH / BYPASS PAYMENT
+            if (orderData.bypassPayment) {
+                // Directly call verify/activate
+                const verifyPayload = {
+                    razorpay_order_id: orderData.orderId,
+                    razorpay_payment_id: 'free_switch', // Flag for backend
+                    razorpay_signature: 'bypass',
+                    planId: selectedPlan._id,
+                    mealType,
+                    lunchAddress: payload.lunchAddress,
+                    dinnerAddress: payload.dinnerAddress
+                };
+
+                await axios.post('http://localhost:5000/api/subscriptions/verify', verifyPayload, config);
+
+                showNotification('Subscription upgraded successfully! (Free upgrade)', 'success');
+                navigate('/my-subscription');
+                return;
+            }
+
+            // 2. Process Payment using Hook (Normal Flow)
+            const paymentMetadata = {
+                planId: selectedPlan._id,
+                mealType,
+                lunchAddress: payload.lunchAddress,
+                dinnerAddress: payload.dinnerAddress
+            };
+
             await initPayment({
                 amount: orderData.amount,
                 currency: orderData.currency,
                 orderId: orderData.orderId,
                 user: user,
                 description: `Subscribe to ${selectedPlan.name} (${selectedPlan.duration})`,
-                verifyUrl: 'http://localhost:5000/api/subscriptions/subscribe-verify',
-                metadata: {
-                    planId: selectedPlan._id,
-                    mealType,
-                    deliveryAddress
-                },
+                verifyUrl: 'http://localhost:5000/api/subscriptions/verify',
+                metadata: paymentMetadata,
                 showNotification,
                 onSuccess: (data) => {
                     showNotification('Subscription successful! Redirecting...', 'success');
@@ -318,6 +378,11 @@ const Plans = () => {
                             user={user}
                             selectedAddress={deliveryAddress}
                             onAddressChange={setDeliveryAddress}
+                            dualAddressMode={mealType === 'both'}
+                            lunchAddress={lunchAddress}
+                            dinnerAddress={dinnerAddress}
+                            onLunchAddressChange={setLunchAddress}
+                            onDinnerAddressChange={setDinnerAddress}
                         />
                     </div>
 

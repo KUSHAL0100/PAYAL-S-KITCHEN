@@ -4,6 +4,25 @@ import { Plus, Trash2, Edit2, Check, X, Package, Calendar, Clock, MessageSquare,
 import AuthContext from '../../context/AuthContext';
 import NotificationContext from '../../context/NotificationContext';
 
+const CompactAddress = ({ address, label }) => {
+    if (!address?.street) return null;
+    return (
+        <div className="flex flex-col leading-tight">
+            <div className="flex items-start gap-1">
+                {label && (
+                    <div className="flex flex-col items-center mt-0.5">
+                        {label.split('').map((char, i) => (
+                            <span key={i} className={`text-[8px] font-black ${char === 'L' ? 'text-orange-600' : 'text-blue-600'}`}>{char}</span>
+                        ))}
+                    </div>
+                )}
+                <span className="text-[10px] font-bold text-gray-900 break-words max-w-[150px]">{address.street}</span>
+            </div>
+            <span className="text-[9px] text-gray-500 ml-3 font-medium">{address.city}</span>
+        </div>
+    );
+};
+
 const AdminDashboard = () => {
     const { user } = useContext(AuthContext);
     const { showNotification } = useContext(NotificationContext);
@@ -591,7 +610,10 @@ const AdminDashboard = () => {
                                         <Clock className="h-6 w-6 mr-3 text-orange-500" />
                                         Latest Business Pulse
                                     </h3>
-                                    <button onClick={fetchOrders} className="text-sm font-bold text-orange-600 hover:bg-orange-50 px-4 py-2 rounded-xl transition-colors">
+                                    <button
+                                        onClick={() => { setActiveTab('orders'); fetchOrders(); }}
+                                        className="text-sm font-bold text-orange-600 hover:bg-orange-50 px-4 py-2 rounded-xl transition-colors"
+                                    >
                                         View Full Log
                                     </button>
                                 </div>
@@ -1136,13 +1158,36 @@ const AdminDashboard = () => {
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
-                                                        <div className="text-sm text-gray-900 max-w-xs truncate" title={sub.deliveryAddress ? `${sub.deliveryAddress.street}, ${sub.deliveryAddress.city}` : 'N/A'}>
-                                                            {sub.deliveryAddress ? `${sub.deliveryAddress.street}, ${sub.deliveryAddress.city}` : 'N/A'}
+                                                        <div className="text-sm text-gray-900 max-w-xs">
+                                                            {(() => {
+                                                                const { lunchAddress: l, dinnerAddress: d, mealType: type } = sub;
+                                                                const isDual = l?.street && d?.street && (l.street !== d.street || l.city !== d.city);
+
+                                                                if (type === 'both' && isDual) {
+                                                                    return (
+                                                                        <div className="flex flex-col gap-2 py-1 min-w-[120px]">
+                                                                            <CompactAddress address={l} label="L" />
+                                                                            <div className="border-t border-gray-100 pt-1">
+                                                                                <CompactAddress address={d} label="D" />
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                }
+
+                                                                const label = type === 'both' ? 'LD' : (type === 'lunch' ? 'L' : 'D');
+                                                                const addr = (type === 'dinner' ? d : l) || l || d;
+
+                                                                return addr?.street ? (
+                                                                    <div className="py-1">
+                                                                        <CompactAddress address={addr} label={label} />
+                                                                    </div>
+                                                                ) : <span className="text-gray-400 text-xs italic">No address set</span>;
+                                                            })()}
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                        ${sub.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                            ${sub.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                                                             {sub.status}
                                                         </span>
                                                     </td>
@@ -1299,7 +1344,7 @@ const AdminDashboard = () => {
 
                 {/* --- Menu Modal --- */}
                 {isMenuModalOpen && (
-                    <div className="fixed inset-0 z-50 overflow-y-auto">
+                    <div className="fixed inset-0 z-[999] overflow-y-auto">
                         <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
                             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setIsMenuModalOpen(false)}></div>
                             <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
@@ -1388,7 +1433,7 @@ const AdminDashboard = () => {
 
                 {/* --- Plan Modal --- */}
                 {isPlanModalOpen && (
-                    <div className="fixed inset-0 z-50 overflow-y-auto">
+                    <div className="fixed inset-0 z-[999] overflow-y-auto">
                         <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
                             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closePlanModal}></div>
                             <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
@@ -1475,7 +1520,7 @@ const AdminDashboard = () => {
 
                 {/* --- Reply Modal --- */}
                 {isReplyModalOpen && (
-                    <div className="fixed inset-0 z-50 overflow-y-auto">
+                    <div className="fixed inset-0 z-[999] overflow-y-auto">
                         <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
                             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeReplyModal}></div>
                             <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>

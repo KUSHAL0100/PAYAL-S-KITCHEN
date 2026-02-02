@@ -24,7 +24,7 @@ const Notification = () => {
     }
 
     return (
-        <div className={`fixed top-4 right-4 z-50 w-full max-w-sm overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 ${bgColor} transform transition-all duration-300 ease-in-out`}>
+        <div className={`fixed top-4 right-4 z-[1000] w-full max-w-sm overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 ${bgColor} transform transition-all duration-300 ease-in-out`}>
             <div className="p-4">
                 <div className="flex items-start">
                     <div className="flex-shrink-0">

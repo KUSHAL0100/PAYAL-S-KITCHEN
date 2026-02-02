@@ -8,10 +8,10 @@ const userSchema = mongoose.Schema({
     role: { type: String, enum: ['user', 'admin', 'employee'], default: 'user' },
     phone: { type: String },
     addresses: [{
-        label: { type: String }, // e.g., 'Home', 'Work', 'Lunch', 'Dinner'
-        street: { type: String },
-        city: { type: String },
-        zip: { type: String },
+        label: { type: String, maxlength: 50 },
+        street: { type: String, maxlength: 70 },
+        city: { type: String, maxlength: 30 },
+        zip: { type: String, maxlength: 10 },
     }],
     currentSubscription: {
         type: mongoose.Schema.Types.ObjectId,

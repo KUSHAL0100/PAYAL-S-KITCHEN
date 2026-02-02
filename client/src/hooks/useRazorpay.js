@@ -57,6 +57,8 @@ const useRazorpay = () => {
                     onSuccess(verificationRes.data, response);
                 } catch (error) {
                     console.error('Payment verification failed:', error);
+                    const msg = error.response?.data?.message || 'Verification failed';
+                    showNotification('Verification Error: ' + msg, 'error');
                     onError(error);
                 }
             },

@@ -12,7 +12,8 @@ const {
     getAvailableUpgrades,
     upgradeSubscription,
     verifyUpgrade,
-    changeMealType
+    changeMealType,
+    updateDeliveryAddresses
 } = require('../controllers/subscriptionController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -21,6 +22,7 @@ router.route('/')
     .get(protect, admin, getAllSubscriptions);
 
 router.put('/change-meal-type', protect, changeMealType);
+router.put('/update-addresses', protect, updateDeliveryAddresses);
 router.put('/:id/cancel', protect, admin, adminCancelSubscription);
 
 router.route('/verify').post(protect, verifySubscriptionPayment);
