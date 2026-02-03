@@ -107,7 +107,7 @@ const verifySubscriptionPayment = async (req, res) => {
         let upgradeDiscount = 0;
         if (activeSub) {
             upgradeDiscount = subUtils.calculateProRataCredit(activeSub);
-            activeSub.status = 'Cancelled';
+            activeSub.status = 'Upgraded';
             await activeSub.save();
         }
 
@@ -154,21 +154,20 @@ const verifySubscriptionPayment = async (req, res) => {
             items: [{
                 name: `${plan.name} Plan (${plan.duration}) - ${mealTypeLabel}`,
                 quantity: 1,
-                name: `${plan.name} Plan (${plan.duration}) - ${mealTypeLabel}`,
-                quantity: 1,
                 selectedItems: [{
                     name: plan.name,
                     duration: plan.duration,
                     mealType: mealTypeLabel,
                     planId: plan._id
-                }]
+                }],
+                deliveryDate: startDate
             }],
             price: totalValue,
             proRataCredit: upgradeDiscount,
             totalAmount: finalPricePaid,
             status: 'Confirmed',
             type: activeSub ? 'subscription_upgrade' : 'subscription_purchase',
-            deliveryDate: new Date(),
+            paymentDate: new Date(),
             paymentStatus: 'Paid',
             paymentId: razorpay_payment_id || 'Free Switch',
             subscription: createdSubscription._id,
@@ -326,8 +325,18 @@ const verifyRenewal = async (req, res) => {
             order.price = renewalPrice;
             order.proRataCredit = 0;
             order.totalAmount = renewalPrice;
-            order.deliveryDate = new Date();
+            order.paymentDate = new Date();
             order.updatedAt = new Date();
+
+            // Fix validation error for legacy orders: Ensure items have a deliveryDate
+            if (order.items && order.items.length > 0) {
+                order.items.forEach(item => {
+                    if (!item.deliveryDate) {
+                        item.deliveryDate = new Date();
+                    }
+                });
+            }
+
             await order.save();
         }
 
@@ -590,7 +599,7 @@ const verifyUpgrade = async (req, res) => {
         }
 
         // Cancel old subscription
-        currentSubscription.status = 'Cancelled';
+        currentSubscription.status = 'Upgraded';
         await currentSubscription.save();
 
         // Calculate new dates
@@ -655,14 +664,15 @@ const verifyUpgrade = async (req, res) => {
                     mealType: mealTypeLabel,
                     planId: newPlan._id,
                     type: 'upgrade'
-                }]
+                }],
+                deliveryDate: startDate
             }],
             price: newAmountPaid,
             proRataCredit: upgradeDiscount,
             totalAmount: upgradePrice,
             status: 'Confirmed',
             type: 'subscription_upgrade',
-            deliveryDate: new Date(),
+            paymentDate: new Date(),
             paymentStatus: 'Paid',
             paymentId: razorpay_payment_id,
             subscription: newSubscription._id,

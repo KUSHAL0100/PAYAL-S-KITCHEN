@@ -224,21 +224,40 @@ const Orders = () => {
                                                 <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Pricing Breakdown</h4>
                                                 <div className="space-y-1">
                                                     <div className="flex justify-between text-xs">
-                                                        <span className="text-gray-500 font-bold">Price:</span>
+                                                        <span className="text-gray-500 font-bold">Subtotal:</span>
                                                         <span className="text-gray-900 font-black">₹{order.price?.toFixed(2) || order.totalAmount.toFixed(2)}</span>
                                                     </div>
-                                                    {order.proRataCredit > 0 && (
-                                                        <div className="flex justify-between text-xs text-teal-600 font-bold">
-                                                            <span>Upgrade Credit:</span>
-                                                            <span>- ₹{order.proRataCredit.toFixed(2)}</span>
-                                                        </div>
-                                                    )}
                                                     {order.discountAmount > 0 && (
                                                         <div className="flex justify-between text-xs text-orange-600 font-bold">
                                                             <span>Discount:</span>
                                                             <span>- ₹{order.discountAmount.toFixed(2)}</span>
                                                         </div>
                                                     )}
+                                                    {order.proRataCredit > 0 && (
+                                                        <div className="flex justify-between text-xs text-teal-600 font-bold">
+                                                            <span>Upgrade Credit:</span>
+                                                            <span>- ₹{order.proRataCredit.toFixed(2)}</span>
+                                                        </div>
+                                                    )}
+                                                    {/* Calculate and display delivery fee if applicable */}
+                                                    {(() => {
+                                                        const subtotal = order.price || 0;
+                                                        const discount = order.discountAmount || 0;
+                                                        const credit = order.proRataCredit || 0;
+                                                        const total = order.totalAmount || 0;
+                                                        const calculatedTotal = subtotal - discount - credit;
+                                                        const deliveryFee = total - calculatedTotal;
+
+                                                        if (deliveryFee > 1) { // Threshold to account for float rounding errors
+                                                            return (
+                                                                <div className="flex justify-between text-xs">
+                                                                    <span className="text-gray-500 font-bold">Delivery Fee:</span>
+                                                                    <span className="text-gray-900 font-black">+ ₹{deliveryFee.toFixed(2)}</span>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    })()}
                                                     <div className="flex justify-between text-sm pt-2 border-t border-gray-100">
                                                         <span className="text-gray-900 font-black uppercase tracking-tighter">Total Paid:</span>
                                                         <span className="text-lg font-black text-orange-600">₹{order.totalAmount.toFixed(2)}</span>

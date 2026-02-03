@@ -6,7 +6,7 @@ const subscriptionSchema = new mongoose.Schema({
     planValue: { type: Number, default: 0 }, // Market price of the plan at time of purchase
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
-    status: { type: String, enum: ['Active', 'Cancelled', 'Expired'], default: 'Active' },
+    status: { type: String, enum: ['Active', 'Cancelled', 'Expired', 'Upgraded'], default: 'Active' },
     paymentId: { type: String },
     amountPaid: { type: Number, default: 0 }, // Actual cash paid in the latest transaction
     mealType: { type: String, enum: ['both', 'lunch', 'dinner'], default: 'both' },

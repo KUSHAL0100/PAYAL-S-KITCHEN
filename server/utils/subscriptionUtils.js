@@ -25,8 +25,6 @@ const calculateProRataCredit = (activeSub, now = new Date()) => {
     const end = new Date(activeSub.endDate);
 
     const totalDays = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
-    const nowTime = new Date(now).setHours(0, 0, 0, 0);
-    const startTime = new Date(start).setHours(0, 0, 0, 0);
 
     const usedDays = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
     const remainingDays = Math.max(0, totalDays - usedDays);

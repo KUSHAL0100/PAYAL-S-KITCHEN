@@ -1163,15 +1163,15 @@ const AdminDashboard = () => {
                                                             {sub.mealType === 'both' ? 'Lunch + Dinner' : sub.mealType}
                                                         </span>
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap">
-                                                        <div className="text-sm text-gray-900 max-w-xs">
+                                                    <td className="px-6 py-4 min-w-[200px]">
+                                                        <div className="text-sm text-gray-900">
                                                             {(() => {
                                                                 const { lunchAddress: l, dinnerAddress: d, mealType: type } = sub;
                                                                 const isDual = l?.street && d?.street && (l.street !== d.street || l.city !== d.city);
 
                                                                 if (type === 'both' && isDual) {
                                                                     return (
-                                                                        <div className="flex flex-col gap-2 py-1 min-w-[120px]">
+                                                                        <div className="flex flex-col gap-2 py-1">
                                                                             <CompactAddress address={l} label="L" />
                                                                             <div className="border-t border-gray-100 pt-1">
                                                                                 <CompactAddress address={d} label="D" />
@@ -1193,7 +1193,9 @@ const AdminDashboard = () => {
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                            ${sub.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                            ${sub.status === 'Active' ? 'bg-green-100 text-green-800' :
+                                                                sub.status === 'Upgraded' ? 'bg-blue-100 text-blue-800' :
+                                                                    'bg-red-100 text-red-800'}`}>
                                                             {sub.status}
                                                         </span>
                                                     </td>
