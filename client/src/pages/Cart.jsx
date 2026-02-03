@@ -178,35 +178,39 @@ const Cart = () => {
                     // Note: verificationData is from backend, razorpayRawResponse is from SDK (has payment_id)
 
                     const dbOrderItems = cartItems.map(item => {
+                        let itemDeliveryDate = new Date();
+                        if (item.deliveryDate) {
+                            itemDeliveryDate = new Date(item.deliveryDate);
+                        } else {
+                            itemDeliveryDate.setDate(itemDeliveryDate.getDate() + 1);
+                        }
+
                         if (item.type === 'event') {
                             return {
                                 name: 'Event Catering',
                                 quantity: item.guestCount,
-                                selectedItems: { name: item.items.map(i => i.name).join(', ') }
+                                selectedItems: { name: item.items.map(i => i.name).join(', ') },
+                                deliveryDate: itemDeliveryDate
                             };
                         } else {
                             return {
                                 name: item.name,
                                 quantity: item.quantity,
-                                selectedItems: { name: (item.menuItems || []).join(', ') }
+                                selectedItems: { name: (item.menuItems || []).join(', ') },
+                                deliveryDate: itemDeliveryDate
                             };
                         }
                     });
 
-                    let deliveryDate = new Date();
-                    const itemWithDate = cartItems.find(item => item.deliveryDate);
-                    if (itemWithDate) {
-                        deliveryDate = new Date(itemWithDate.deliveryDate);
-                    } else {
-                        deliveryDate.setDate(deliveryDate.getDate() + 1);
-                    }
+                    // Payment date is essentially the current time of transaction
+                    const paymentDate = new Date();
 
                     const finalOrderData = {
                         items: dbOrderItems,
                         price: price,
                         totalAmount: finalTotal,
                         type: orderType,
-                        deliveryDate: deliveryDate,
+                        paymentDate: paymentDate,
                         deliveryAddress: deliveryAddress,
                         paymentId: razorpayRawResponse.razorpay_payment_id,
                         paymentStatus: 'Paid',

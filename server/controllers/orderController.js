@@ -11,7 +11,7 @@ const createOrder = async (req, res) => {
         price,
         totalAmount,
         type,
-        deliveryDate,
+        paymentDate,
         deliveryAddress,
 
         paymentId,
@@ -23,41 +23,39 @@ const createOrder = async (req, res) => {
         return res.status(400).json({ message: 'No order items' });
     }
 
-    // Cutoff validation
     const now = new Date();
-    const delivery = new Date(deliveryDate);
 
-    // Check for Event orders (48 hours)
-    if (type === 'event') {
-        const diffInHours = (delivery - now) / 1000 / 60 / 60;
-        if (diffInHours < 48) {
-            return res.status(400).json({ message: 'Event orders must be placed at least 48 hours in advance.' });
+    // Validation
+    for (const item of items) {
+        if (!item.deliveryDate) continue;
+        const itemDelivery = new Date(item.deliveryDate);
+
+        // Event item validation (48 hours)
+        if (item.name === 'Event Catering' || (item.selectedItems && item.selectedItems.name && item.selectedItems.name.toLowerCase().includes('event'))) {
+            const diffInHours = (itemDelivery - now) / 1000 / 60 / 60;
+            if (diffInHours < 48) {
+                return res.status(400).json({ message: 'Event catering items must be placed at least 48 hours in advance.' });
+            }
         }
-    }
-    // Check for Single Tiffin orders (12 hours based on Meal Time)
-    else if (type === 'single') {
-        // We need to check each item's meal time from details string
-        // Lunch: 12:00 PM, Dinner: 08:00 PM (20:00)
-
-        for (const item of items) {
-            // We need to check each item's meal time from selectedItems or name
+        // Regular meal validation (Check 12h rule if it looks like a meal)
+        else {
             let mealTime = null;
-
             // Check name first
             if (item.name && item.name.toLowerCase().includes('lunch')) mealTime = 'Lunch';
             else if (item.name && item.name.toLowerCase().includes('dinner')) mealTime = 'Dinner';
 
             // Check selectedItems if not found in name
-            if (!mealTime && item.selectedItems && item.selectedItems.length > 0) {
-                const hasLunch = item.selectedItems.some(si => (si.mealTime === 'Lunch') || (si.name && si.name.includes('Lunch')));
-                const hasDinner = item.selectedItems.some(si => (si.mealTime === 'Dinner') || (si.name && si.name.includes('Dinner')));
+            if (!mealTime && item.selectedItems) {
+                // If selectedItems is object with name string
+                const selName = item.selectedItems.name || '';
+                if (selName.includes('Lunch')) mealTime = 'Lunch';
+                else if (selName.includes('Dinner')) mealTime = 'Dinner';
 
-                if (hasLunch) mealTime = 'Lunch';
-                else if (hasDinner) mealTime = 'Dinner';
+                // If logic was array based previously, keep compatibility if needed, but Cart.jsx sends string joined
             }
 
             if (mealTime) {
-                const itemTargetTime = new Date(delivery);
+                const itemTargetTime = new Date(itemDelivery);
                 if (mealTime === 'Lunch') {
                     itemTargetTime.setHours(12, 0, 0, 0);
                 } else if (mealTime === 'Dinner') {
@@ -67,7 +65,7 @@ const createOrder = async (req, res) => {
                 const diffInHours = (itemTargetTime - now) / 1000 / 60 / 60;
                 if (diffInHours < 12) {
                     return res.status(400).json({
-                        message: `${mealTime} orders must be placed at least 12 hours in advance. Deadline passed for ${itemTargetTime.toLocaleDateString()}.`
+                        message: `${mealTime} orders for ${item.name} must be placed at least 12 hours in advance. Deadline passed.`
                     });
                 }
             }
@@ -81,7 +79,7 @@ const createOrder = async (req, res) => {
             price: price || totalAmount, // Fallback for safety
             totalAmount,
             type,
-            deliveryDate,
+            paymentDate,
             deliveryAddress,
             paymentId: paymentId || 'DUMMY_PAYMENT_ID',
             paymentStatus: 'Paid', // Assuming immediate payment for now
@@ -188,6 +186,7 @@ const getOrders = async (req, res) => {
         const orders = await Order.find({}).populate('user', 'id name').sort({ createdAt: -1 });
         res.json(orders);
     } catch (error) {
+        console.error('Error fetching all orders:', error); // Improved logging
         res.status(500).json({ message: 'Server Error' });
     }
 };
@@ -256,7 +255,6 @@ const cancelOrder = async (req, res) => {
         const total = parseFloat(order.totalAmount) || 0;
 
         // Calculate cancellation fee based on order status
-        // Calculate cancellation fee based on order status
         if (order.status === 'Pending') {
             // Pending orders: 0% fee, 100% refund
             cancellationFee = 0;
@@ -264,8 +262,29 @@ const cancelOrder = async (req, res) => {
         } else {
             // Confirmed orders: Time-based cancellation fees
             const now = new Date();
-            const deliveryDate = new Date(order.deliveryDate);
-            const diffInHours = (deliveryDate - now) / (1000 * 60 * 60);
+
+            // Find earliest delivery date to be conservative/strict
+            let earliestDelivery = null;
+            if (order.items && order.items.length > 0) {
+                order.items.forEach(item => {
+                    if (item.deliveryDate) {
+                        const d = new Date(item.deliveryDate);
+                        if (!earliestDelivery || d < earliestDelivery) {
+                            earliestDelivery = d;
+                        }
+                    }
+                });
+            }
+            // Fallback if no delivery dates found (legacy orders?)
+            if (!earliestDelivery) {
+                // Try payment date + 24h? or just skip check?
+                // Use createdAt as fallback for very old data?
+                // Let's use a default if missing to avoid crash, assume strict policy
+                earliestDelivery = new Date(order.createdAt);
+                earliestDelivery.setDate(earliestDelivery.getDate() + 1);
+            }
+
+            const diffInHours = (earliestDelivery - now) / (1000 * 60 * 60);
 
             if (order.type === 'event') {
                 // Event orders: 100% fee if < 5 hours, 20% fee otherwise

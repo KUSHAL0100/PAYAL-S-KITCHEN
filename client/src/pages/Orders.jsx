@@ -203,6 +203,11 @@ const Orders = () => {
                                                                 {item.selectedItems.name}
                                                             </p>
                                                         )}
+                                                        {item.deliveryDate && (
+                                                            <p className="text-[10px] font-bold text-teal-600 mt-1 pl-7">
+                                                                Delivery: {new Date(item.deliveryDate).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
@@ -212,8 +217,8 @@ const Orders = () => {
                                     <div className="space-y-6">
                                         <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                                             <div className="col-span-2 md:col-span-1">
-                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Delivery Date</h4>
-                                                <p className="text-sm font-black text-gray-900">{new Date(order.deliveryDate).toLocaleDateString(undefined, { dateStyle: 'long' })}</p>
+                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Payment Date</h4>
+                                                <p className="text-sm font-black text-gray-900">{order.paymentDate ? new Date(order.paymentDate).toLocaleDateString(undefined, { dateStyle: 'long' }) : new Date(order.createdAt).toLocaleDateString(undefined, { dateStyle: 'long' })}</p>
                                             </div>
                                             <div className="col-span-2 md:col-span-1">
                                                 <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Pricing Breakdown</h4>

@@ -778,9 +778,9 @@ const AdminDashboard = () => {
                                                         <p className="text-sm text-gray-500">
                                                             Ordered: {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString()}
                                                         </p>
-                                                        {order.deliveryDate && (
+                                                        {order.paymentDate && (
                                                             <p className="text-sm text-orange-600 font-medium">
-                                                                Delivery Date: {new Date(order.deliveryDate).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
+                                                                Payment Date: {new Date(order.paymentDate).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
                                                             </p>
                                                         )}
                                                         <p className="text-sm text-gray-500 mt-1">
@@ -801,7 +801,10 @@ const AdminDashboard = () => {
                                                     </div>
                                                 </div>
                                                 <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                                                    <p><strong>Items:</strong> {order.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}</p>
+                                                    <p><strong>Items:</strong> {order.items.map(i => {
+                                                        const dateStr = i.deliveryDate ? ` (${new Date(i.deliveryDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})` : '';
+                                                        return `${i.quantity}x ${i.name}${dateStr}`;
+                                                    }).join(', ')}</p>
                                                     {/* Show menu items if available */}
                                                     {/* Show menu items if available */}
                                                     {order.items.some(i => i.selectedItems && (i.selectedItems.name || (Array.isArray(i.selectedItems) && i.selectedItems.length > 0))) && (

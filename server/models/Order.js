@@ -5,7 +5,8 @@ const orderSchema = mongoose.Schema({
     items: [{
         name: String,
         quantity: Number,
-        selectedItems: mongoose.Schema.Types.Mixed // Store complex items (events, menus, etc)
+        selectedItems: mongoose.Schema.Types.Mixed, // Store complex items (events, menus, etc)
+        deliveryDate: { type: Date, required: true }
     }],
     price: { type: Number, required: true },
     proRataCredit: { type: Number, default: 0 },
@@ -13,7 +14,7 @@ const orderSchema = mongoose.Schema({
     totalAmount: { type: Number, required: true },
     status: { type: String, enum: ['Pending', 'Confirmed', 'Preparing', 'Out for Delivery', 'Delivered', 'Cancelled'], default: 'Pending' },
     type: { type: String, enum: ['single', 'event', 'subscription_daily', 'subscription_purchase', 'subscription_upgrade'], required: true },
-    deliveryDate: { type: Date, required: true },
+    paymentDate: { type: Date, required: true },
     deliveryAddress: {
         street: { type: String, maxlength: 80, required: true },
         city: { type: String, maxlength: 30, required: true },
