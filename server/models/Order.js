@@ -12,8 +12,8 @@ const orderSchema = mongoose.Schema({
     proRataCredit: { type: Number, default: 0 },
     discountAmount: { type: Number, default: 0 },
     totalAmount: { type: Number, required: true },
-    status: { type: String, enum: ['Pending', 'Confirmed', 'Preparing', 'Out for Delivery', 'Delivered', 'Cancelled'], default: 'Pending' },
-    type: { type: String, enum: ['single', 'event', 'subscription_daily', 'subscription_purchase', 'subscription_upgrade'], required: true },
+    status: { type: String, enum: ['Pending', 'Confirmed', 'Cancelled', 'Upgraded'], default: 'Pending' },
+    type: { type: String, enum: ['single', 'event', 'subscription_purchase', 'subscription_upgrade'], required: true },
     paymentDate: { type: Date, required: true },
     deliveryAddress: {
         street: { type: String, maxlength: 80, required: true },
@@ -27,5 +27,10 @@ const orderSchema = mongoose.Schema({
     refundAmount: { type: Number, default: 0 },
     couponCode: { type: String },
 }, { timestamps: true });
+
+// Indexes for faster queries
+orderSchema.index({ user: 1, createdAt: -1 }); // For getMyOrders sorted by date
+orderSchema.index({ status: 1 }); // For filtering by status
+orderSchema.index({ subscription: 1 }); // For Order-Subscription joins
 
 module.exports = mongoose.model('Order', orderSchema);

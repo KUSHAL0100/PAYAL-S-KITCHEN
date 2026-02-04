@@ -40,4 +40,8 @@ subscriptionSchema.pre('save', function () {
     }
 });
 
+// Indexes for faster queries
+subscriptionSchema.index({ user: 1, status: 1 }); // For finding user's active subscription
+subscriptionSchema.index({ status: 1 }); // For filtering by status
+
 module.exports = mongoose.model('Subscription', subscriptionSchema);

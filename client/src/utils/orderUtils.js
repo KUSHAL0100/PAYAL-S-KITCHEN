@@ -41,8 +41,14 @@ export const calculateCancellationFee = (order) => {
     let refundAmount = 0;
     let percentage = '0%';
 
+    // Policy: Subscriptions have a NO REFUND policy regardless of status or timing
+    if (order.type === 'subscription_purchase' || order.type === 'subscription_upgrade') {
+        cancellationFee = totalAmount;
+        refundAmount = 0;
+        percentage = '100%';
+    }
     // Policy 1: If Pending (Admin hasn't approved), 0% cancellation fee
-    if (order.status === 'Pending') {
+    else if (order.status === 'Pending') {
         cancellationFee = 0;
         refundAmount = totalAmount;
         percentage = '0%';

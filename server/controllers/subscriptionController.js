@@ -109,6 +109,12 @@ const verifySubscriptionPayment = async (req, res) => {
             upgradeDiscount = subUtils.calculateProRataCredit(activeSub);
             activeSub.status = 'Upgraded';
             await activeSub.save();
+
+            // Sync: Mark previous orders as Upgraded
+            await Order.updateMany(
+                { subscription: activeSub._id },
+                { status: 'Upgraded' }
+            );
         }
 
         const finalPricePaid = Math.max(0, totalValue - upgradeDiscount);
@@ -212,6 +218,26 @@ const cancelSubscription = async (req, res) => {
         if (user.currentSubscription && user.currentSubscription.toString() === subscriptionId) {
             user.currentSubscription = null;
             await user.save();
+        }
+
+        // Mark ALL connected orders as 'Cancelled' so it reflects in Order History
+        await Order.updateMany(
+            { subscription: subscription._id },
+            {
+                status: 'Cancelled',
+                refundAmount: 0,
+                cancellationFee: 1 // We can't easily know totalAmount for each in updateMany, but orderController handles the logic if they try to cancel again.
+                // Actually, let's just update the status. The specific refund policy is handled in the order cancel route too.
+            }
+        );
+
+        // For the latest order, we want to set the cancellationFee correctly if we had a single reference, 
+        // but updateMany is safer to ensure nothing stays "Confirmed".
+        const lastOrder = await Order.findOne({ subscription: subscription._id }).sort({ createdAt: -1 });
+        if (lastOrder) {
+            lastOrder.refundAmount = 0;
+            lastOrder.cancellationFee = lastOrder.totalAmount;
+            await lastOrder.save();
         }
 
         res.json({
@@ -356,7 +382,7 @@ const getMySubscription = async (req, res) => {
         const subscription = await Subscription.findOne({
             user: req.user._id,
             status: 'Active',
-        }).populate('plan');
+        }).populate('plan').lean();
 
         if (subscription) {
             res.json(subscription);
@@ -377,7 +403,8 @@ const getAllSubscriptions = async (req, res) => {
         const subscriptions = await Subscription.find({})
             .populate('user', 'name email')
             .populate('plan', 'name price duration')
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
         res.json(subscriptions);
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
@@ -404,6 +431,15 @@ const adminCancelSubscription = async (req, res) => {
             user.currentSubscription = null;
             await user.save();
         }
+
+        // Update associated orders to Cancelled
+        await Order.updateMany(
+            { subscription: subscription._id },
+            {
+                status: 'Cancelled',
+                refundAmount: 0
+            }
+        );
 
         res.json({ message: 'Subscription cancelled by admin', subscription });
     } catch (error) {
@@ -601,6 +637,13 @@ const verifyUpgrade = async (req, res) => {
         // Cancel old subscription
         currentSubscription.status = 'Upgraded';
         await currentSubscription.save();
+
+        // Mark ALL previous orders as Upgraded to avoid confusion in Order History
+        // Use currentSubscription._id to find all orders linked to the subscription we are transitioning FROM
+        await Order.updateMany(
+            { subscription: currentSubscription._id },
+            { status: 'Upgraded' }
+        );
 
         // Calculate new dates
         const startDate = new Date();

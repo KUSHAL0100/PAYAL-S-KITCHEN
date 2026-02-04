@@ -167,15 +167,16 @@ const Orders = () => {
                                     </div>
 
                                     <div className="flex items-center gap-4">
-                                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] shadow-sm ${order.status === 'Delivered' ? 'bg-teal-50 text-teal-600 border border-teal-100' :
-                                            order.status === 'Cancelled' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] shadow-sm ${order.status === 'Cancelled' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                                            order.status === 'Upgraded' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
                                                 'bg-amber-50 text-amber-600 border border-amber-100'
                                             }`}>
                                             {order.status}
                                         </span>
 
+                                        {/* Show Cancel button for all except Cancelled and Upgraded orders */}
                                         {order.status !== 'Cancelled' &&
-                                            order.status !== 'Delivered' && (
+                                            order.status !== 'Upgraded' && (
                                                 <button
                                                     onClick={() => handleCancelOrder(order)}
                                                     className="px-4 py-1.5 bg-white border border-rose-200 text-rose-500 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-colors shadow-sm active:scale-95"

@@ -66,9 +66,6 @@ const EmployeeDashboard = () => {
                                             >
                                                 <option value="Pending">Pending</option>
                                                 <option value="Confirmed">Confirmed</option>
-                                                <option value="Preparing">Preparing</option>
-                                                <option value="Out for Delivery">Out for Delivery</option>
-                                                <option value="Delivered">Delivered</option>
                                                 <option value="Cancelled">Cancelled</option>
                                             </select>
                                         </div>

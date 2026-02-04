@@ -1,4 +1,6 @@
 const Order = require('../models/Order');
+const Subscription = require('../models/Subscription');
+const User = require('../models/User');
 const razorpayUtil = require('../utils/razorpay');
 const crypto = require('crypto');
 
@@ -102,7 +104,7 @@ const getMyOrders = async (req, res) => {
     try {
         const orders = await Order.find({ user: req.user._id })
             .sort({ createdAt: -1 })
-            .populate('subscription');
+            .lean(); // Use lean() for faster read-only queries
         res.json(orders);
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
@@ -183,10 +185,13 @@ const updateOrderStatus = async (req, res) => {
 // @access  Private/Admin/Employee
 const getOrders = async (req, res) => {
     try {
-        const orders = await Order.find({}).populate('user', 'id name').sort({ createdAt: -1 });
+        const orders = await Order.find({})
+            .populate('user', 'id name')
+            .sort({ createdAt: -1 })
+            .lean(); // Use lean() for faster read-only queries
         res.json(orders);
     } catch (error) {
-        console.error('Error fetching all orders:', error); // Improved logging
+        console.error('Error fetching all orders:', error);
         res.status(500).json({ message: 'Server Error' });
     }
 };
@@ -246,7 +251,7 @@ const cancelOrder = async (req, res) => {
             return res.status(401).json({ message: 'Not authorized to cancel this order' });
         }
 
-        if (order.status === 'Cancelled' || order.status === 'Delivered') {
+        if (order.status === 'Cancelled' || order.status === 'Delivered' || order.status === 'Upgraded') {
             return res.status(400).json({ message: 'Cannot cancel this order' });
         }
 
@@ -254,8 +259,11 @@ const cancelOrder = async (req, res) => {
         let refundAmount = 0;
         const total = parseFloat(order.totalAmount) || 0;
 
-        // Calculate cancellation fee based on order status
-        if (order.status === 'Pending') {
+        // Enforce No Refund policy for subscriptions
+        if (order.type === 'subscription_purchase' || order.type === 'subscription_upgrade') {
+            cancellationFee = total;
+            refundAmount = 0;
+        } else if (order.status === 'Pending') {
             // Pending orders: 0% fee, 100% refund
             cancellationFee = 0;
             refundAmount = total;
@@ -334,6 +342,23 @@ const cancelOrder = async (req, res) => {
         order.cancellationFee = cancellationFee;
         order.refundAmount = refundAmount;
         await order.save();
+
+        // Bi-directional sync: Cancel linked Subscription if this is a subscription order
+        if (order.subscription) {
+            const subscription = await Subscription.findById(order.subscription);
+            // Cancel if subscription exists and is not already cancelled
+            if (subscription && subscription.status !== 'Cancelled') {
+                subscription.status = 'Cancelled';
+                await subscription.save();
+
+                // Also nullify the user's currentSubscription reference
+                const user = await User.findById(req.user._id);
+                if (user && user.currentSubscription && user.currentSubscription.toString() === subscription._id.toString()) {
+                    user.currentSubscription = null;
+                    await user.save();
+                }
+            }
+        }
 
         res.json({
             message: 'Order cancelled successfully',
