@@ -168,14 +168,16 @@ const Orders = () => {
 
                                     <div className="flex items-center gap-4">
                                         <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] shadow-sm ${order.status === 'Cancelled' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
-                                            order.status === 'Upgraded' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
-                                                'bg-amber-50 text-amber-600 border border-amber-100'
+                                            order.status === 'Rejected' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
+                                                order.status === 'Upgraded' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
+                                                    'bg-amber-50 text-amber-600 border border-amber-100'
                                             }`}>
                                             {order.status}
                                         </span>
 
                                         {/* Show Cancel button for all except Cancelled and Upgraded orders */}
                                         {order.status !== 'Cancelled' &&
+                                            order.status !== 'Rejected' &&
                                             order.status !== 'Upgraded' && (
                                                 <button
                                                     onClick={() => handleCancelOrder(order)}
@@ -199,9 +201,11 @@ const Orders = () => {
                                                             <span className="h-5 w-5 bg-orange-50 text-orange-600 text-[10px] flex items-center justify-center rounded-lg">{item.quantity}x</span>
                                                             {item.name}
                                                         </p>
-                                                        {item.selectedItems && item.selectedItems.name && (
+                                                        {item.selectedItems && (
                                                             <p className="text-[10px] font-bold text-gray-400 mt-1 pl-7">
-                                                                {item.selectedItems.name}
+                                                                {Array.isArray(item.selectedItems)
+                                                                    ? item.selectedItems.map(si => si.name || si).join(', ')
+                                                                    : item.selectedItems.name || ''}
                                                             </p>
                                                         )}
                                                         {item.deliveryDate && (
@@ -275,8 +279,8 @@ const Orders = () => {
                                             </div>
                                         </div>
 
-                                        {/* Refund Details for Cancelled Orders */}
-                                        {order.status === 'Cancelled' && (
+                                        {/* Refund Details for Cancelled/Rejected Orders */}
+                                        {(order.status === 'Cancelled' || order.status === 'Rejected') && (
                                             <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100">
                                                 <div className="flex justify-between items-center mb-2">
                                                     <span className="text-[10px] font-black text-rose-800 uppercase tracking-widest">Refund Details</span>

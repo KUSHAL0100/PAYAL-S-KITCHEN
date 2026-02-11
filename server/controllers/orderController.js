@@ -150,30 +150,49 @@ const updateOrderStatus = async (req, res) => {
             return res.status(404).json({ message: 'Order not found' });
         }
 
-        // If status is being changed to Cancelled (meaning Admin/Employee rejected it)
-        if (status === 'Cancelled' && order.status !== 'Cancelled') {
+        let refundError = null;
+
+        // If status is being changed to Rejected (meaning Admin/Employee rejected it)
+        if (status === 'Rejected' && order.status !== 'Rejected') {
             const total = parseFloat(order.totalAmount) || 0;
 
-            // If it's already paid, trigger a full refund (100% since merchant rejected it)
-            if (order.paymentStatus === 'Paid' && order.paymentId) {
+            // Full refund — no cancellation fee when merchant rejects
+            order.refundAmount = total;
+            order.cancellationFee = 0;
+
+            // If it's already paid, attempt Razorpay refund
+            if (order.paymentStatus === 'Paid' && order.paymentId && order.paymentId !== 'DUMMY_PAYMENT_ID') {
                 try {
                     await razorpayUtil.processRefund(order.paymentId, total);
-                    order.refundAmount = total;
-                    order.cancellationFee = 0;
+                    order.paymentStatus = 'Refunded';
+                    console.log(`Full refund of ₹${total} processed for order ${order._id}`);
                 } catch (refundErr) {
-                    console.error('Merchant initiated refund failed:', refundErr.message);
-                    // Still mark as cancelled but keep track of error if needed
+                    const errorMsg = refundErr.error?.description || refundErr.message || 'Unknown Razorpay error';
+                    console.error('Merchant initiated refund failed:', errorMsg);
+                    
+                    // Check if already refunded
+                    if (refundErr.error?.description === 'The payment has been fully refunded' ||
+                        (refundErr.message && refundErr.message.includes('refunded'))) {
+                        order.paymentStatus = 'Refunded';
+                    } else {
+                        order.paymentStatus = 'Refund Failed';
+                        refundError = errorMsg;
+                    }
                 }
             } else {
-                // Not paid, just cancel
-                order.refundAmount = 0;
-                order.cancellationFee = 0;
+                // Dummy payment or not paid — mark as refunded for record keeping
+                order.paymentStatus = 'Refunded';
             }
         }
 
         order.status = status;
         const updatedOrder = await order.save();
-        res.json(updatedOrder);
+
+        res.json({
+            order: updatedOrder,
+            refundAmount: updatedOrder.refundAmount,
+            refundError
+        });
     } catch (error) {
         console.error('Error updating order status:', error);
         res.status(500).json({ message: 'Server Error' });
@@ -332,8 +351,9 @@ const cancelOrder = async (req, res) => {
                     console.log(`Payment likely already refunded: ${error.message}`);
                     refundData = { id: 'manual_check', amount: refundAmount * 100 };
                 } else {
-                    console.error(`Refund failed for order ${order._id}:`, error.message);
-                    refundError = error.message;
+                const errorMsg = error.error?.description || error.message || 'Unknown Razorpay error';
+                console.error(`Refund failed for order ${order._id}:`, errorMsg);
+                refundError = errorMsg;
                 }
             }
         }

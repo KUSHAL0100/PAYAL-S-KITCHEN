@@ -63,6 +63,8 @@ const importData = async () => {
 
                         if (item.selectedItems && Array.isArray(item.selectedItems)) {
                             detailsParts.push(item.selectedItems.join(', '));
+                        } else if (item.selectedItems && item.selectedItems.name) {
+                            detailsParts.push(item.selectedItems.name);
                         } else if (item.details) {
                             detailsParts.push(item.details);
                         }

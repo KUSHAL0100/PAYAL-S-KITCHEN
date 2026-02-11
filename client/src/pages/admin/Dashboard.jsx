@@ -77,7 +77,7 @@ const AdminDashboard = () => {
     const stats = useMemo(() => {
         const totalRevenue = orders.reduce((acc, order) => {
             // Only count paid/confirmed orders towards revenue
-            if (order.status === 'Pending' || order.status === 'Rejected') return acc;
+            if (order.status === 'Pending' || order.status === 'Rejected' || order.status === 'Cancelled') return acc;
             const paid = parseFloat(order.totalAmount) || 0;
             const refund = parseFloat(order.refundAmount) || 0;
             return acc + (paid - refund);
@@ -214,18 +214,35 @@ const AdminDashboard = () => {
     };
 
     const handleUpdateOrderStatus = async (orderId, newStatus) => {
+        // Confirmation dialog for rejections
+        if (newStatus === 'Rejected') {
+            const order = orders.find(o => o._id === orderId);
+            const amount = order?.totalAmount || 0;
+            if (!window.confirm(`Reject this order?\n\nA full refund of ₹${amount} will be processed to the customer.`)) return;
+        }
+
         try {
             const config = {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             };
-            await axios.put(`http://127.0.0.1:5000/api/orders/${orderId}/status`, { status: newStatus }, config);
+            const response = await axios.put(`http://127.0.0.1:5000/api/orders/${orderId}/status`, { status: newStatus }, config);
 
-            // Optimistic update
+            // Use the full updated order from the API response
+            const updatedOrder = response.data.order || response.data;
             setOrders(orders.map(order =>
-                order._id === orderId ? { ...order, status: newStatus } : order
+                order._id === orderId ? { ...order, ...updatedOrder } : order
             ));
 
-            showNotification(`Order ${newStatus === 'Confirmed' ? 'Accepted' : 'Rejected'}`, 'success');
+            if (newStatus === 'Rejected') {
+                const refundAmt = response.data.refundAmount || 0;
+                if (response.data.refundError) {
+                    showNotification(`Order rejected. Refund of ₹${refundAmt} failed: ${response.data.refundError}`, 'warning');
+                } else {
+                    showNotification(`Order rejected. ₹${refundAmt} refund processed.`, 'success');
+                }
+            } else {
+                showNotification(`Order ${newStatus === 'Confirmed' ? 'Accepted' : newStatus}`, 'success');
+            }
         } catch (error) {
             console.error('Error updating order status:', error);
             showNotification('Failed to update order status', 'error');
@@ -765,7 +782,8 @@ const AdminDashboard = () => {
                                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                                                             ${order.status === 'Confirmed' ? 'bg-green-100 text-green-800' :
                                                                 order.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
-                                                                    'bg-yellow-100 text-yellow-800'}`}>
+                                                                    order.status === 'Rejected' ? 'bg-orange-100 text-orange-800' :
+                                                                        'bg-yellow-100 text-yellow-800'}`}>
                                                             {order.status}
                                                         </span>
                                                     </div>
@@ -792,7 +810,7 @@ const AdminDashboard = () => {
                                                         <p className="text-xs text-gray-500">
                                                             Payment: {order.paymentStatus}
                                                         </p>
-                                                        {order.status === 'Cancelled' && (
+                                                        {(order.status === 'Cancelled' || order.status === 'Rejected') && (
                                                             <div className="mt-1 text-xs space-y-0.5">
                                                                 <p className="text-red-600 font-medium">Fee: ₹{order.cancellationFee?.toFixed(0)}</p>
                                                                 <p className="text-green-600 font-medium">Refund: ₹{order.refundAmount?.toFixed(0)}</p>
@@ -806,16 +824,16 @@ const AdminDashboard = () => {
                                                         return `${i.quantity}x ${i.name}${dateStr}`;
                                                     }).join(', ')}</p>
                                                     {/* Show menu items if available */}
-                                                    {/* Show menu items if available */}
-                                                    {order.items.some(i => i.selectedItems && (i.selectedItems.name || (Array.isArray(i.selectedItems) && i.selectedItems.length > 0))) && (
+                                                    {order.items.some(i => i.selectedItems) && (
                                                         <p className="mt-1 text-gray-700">
                                                             <strong>Details:</strong> {order.items
-                                                                .filter(i => i.selectedItems && (i.selectedItems.name || (Array.isArray(i.selectedItems) && i.selectedItems.length > 0)))
+                                                                .filter(i => i.selectedItems)
                                                                 .map(i => {
-                                                                    if (i.selectedItems.name) return i.selectedItems.name;
-                                                                    if (Array.isArray(i.selectedItems)) return i.selectedItems.map(si => si.name || si).join(', ');
-                                                                    return '';
+                                                                    const si = i.selectedItems;
+                                                                    if (Array.isArray(si)) return si.map(s => s.name || s).join(', ');
+                                                                    return si.name || '';
                                                                 })
+                                                                .filter(Boolean)
                                                                 .join(' | ')}
                                                         </p>
                                                     )}
@@ -839,7 +857,7 @@ const AdminDashboard = () => {
                                                         <Check className="h-5 w-5" />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleUpdateOrderStatus(order._id, 'Cancelled')}
+                                                        onClick={() => handleUpdateOrderStatus(order._id, 'Rejected')}
                                                         className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-colors"
                                                         title="Reject Order"
                                                     >

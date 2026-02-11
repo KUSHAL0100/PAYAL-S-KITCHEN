@@ -160,12 +160,12 @@ const verifySubscriptionPayment = async (req, res) => {
             items: [{
                 name: `${plan.name} Plan (${plan.duration}) - ${mealTypeLabel}`,
                 quantity: 1,
-                selectedItems: [{
+                selectedItems: {
                     name: plan.name,
                     duration: plan.duration,
                     mealType: mealTypeLabel,
                     planId: plan._id
-                }],
+                },
                 deliveryDate: startDate
             }],
             price: totalValue,
@@ -701,13 +701,13 @@ const verifyUpgrade = async (req, res) => {
                 quantity: 1,
                 name: `Upgrade to ${newPlan.name} Plan (${newPlan.duration}) - ${mealTypeLabel}`,
                 quantity: 1,
-                selectedItems: [{
+                selectedItems: {
                     name: newPlan.name,
                     duration: newPlan.duration,
                     mealType: mealTypeLabel,
                     planId: newPlan._id,
                     type: 'upgrade'
-                }],
+                },
                 deliveryDate: startDate
             }],
             price: newAmountPaid,

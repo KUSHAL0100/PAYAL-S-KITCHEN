@@ -12,7 +12,7 @@ const orderSchema = mongoose.Schema({
     proRataCredit: { type: Number, default: 0 },
     discountAmount: { type: Number, default: 0 },
     totalAmount: { type: Number, required: true },
-    status: { type: String, enum: ['Pending', 'Confirmed', 'Cancelled', 'Upgraded'], default: 'Pending' },
+    status: { type: String, enum: ['Pending', 'Confirmed', 'Cancelled', 'Rejected', 'Upgraded'], default: 'Pending' },
     type: { type: String, enum: ['single', 'event', 'subscription_purchase', 'subscription_upgrade'], required: true },
     paymentDate: { type: Date, required: true },
     deliveryAddress: {
@@ -20,7 +20,7 @@ const orderSchema = mongoose.Schema({
         city: { type: String, maxlength: 30, required: true },
         zip: { type: String, maxlength: 10, required: true },
     },
-    paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Failed'], default: 'Pending' },
+    paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Failed', 'Refunded', 'Refund Failed'], default: 'Pending' },
     paymentId: { type: String },
     subscription: { type: mongoose.Schema.Types.ObjectId, ref: 'Subscription' },
     cancellationFee: { type: Number, default: 0 },

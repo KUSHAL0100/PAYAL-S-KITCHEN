@@ -35,8 +35,9 @@ const EmployeeDashboard = () => {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
                 },
             };
-            await axios.put(`http://127.0.0.1:5000/api/orders/${id}/status`, { status }, config);
-            setTasks(tasks.map(task => task._id === id ? { ...task, status } : task));
+            const response = await axios.put(`http://127.0.0.1:5000/api/orders/${id}/status`, { status }, config);
+            const updatedOrder = response.data.order || response.data;
+            setTasks(tasks.map(task => task._id === id ? { ...task, ...updatedOrder } : task));
         } catch (error) {
             console.error('Error updating status:', error);
         }
@@ -66,6 +67,7 @@ const EmployeeDashboard = () => {
                                             >
                                                 <option value="Pending">Pending</option>
                                                 <option value="Confirmed">Confirmed</option>
+                                                <option value="Rejected">Rejected</option>
                                                 <option value="Cancelled">Cancelled</option>
                                             </select>
                                         </div>
