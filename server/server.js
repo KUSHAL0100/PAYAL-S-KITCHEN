@@ -23,6 +23,8 @@ app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/complaints', require('./routes/complaintRoutes'));
 app.use('/api/event-items', require('./routes/eventItemRoutes'));
 app.use('/api/coupons', require('./routes/couponRoutes'));
+app.use('/api/delivery-pauses', require('./routes/deliveryPauseRoutes'));
+app.use('/api/admin/delivery-schedule', require('./routes/deliveryScheduleRoutes'));
 
 app.get('/', (req, res) => {
     res.send('API is running...');

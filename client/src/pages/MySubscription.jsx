@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, AlertCircle, RefreshCw, TrendingUp, X, Info, CheckCircle, ClipboardList } from 'lucide-react';
+import { Calendar, AlertCircle, RefreshCw, TrendingUp, X, Info, CheckCircle, ClipboardList, Clock } from 'lucide-react';
+
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
 import { MEAL_PRICE_MULTIPLIER } from '../utils/orderUtils';
 import AddressSelector from '../components/AddressSelector';
 import Modal from '../components/Modal';
 import SubscriptionPrice from '../components/SubscriptionPrice';
+import PauseDeliveryModal from '../components/PauseDeliveryModal';
+import PauseHistory from '../components/PauseHistory';
 import useRazorpay from '../hooks/useRazorpay';
+
 
 const MySubscription = () => {
     const { user } = useContext(AuthContext);
@@ -31,6 +35,11 @@ const MySubscription = () => {
     const [upgradeLunchAddress, setUpgradeLunchAddress] = useState({ street: '', city: '', zip: '', country: 'India' });
     const [upgradeDinnerAddress, setUpgradeDinnerAddress] = useState({ street: '', city: '', zip: '', country: 'India' });
     const [useUpgradeDualAddresses, setUseUpgradeDualAddresses] = useState(true);
+
+    // Pause Delivery State
+    const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
+    const [refreshPauseHistory, setRefreshPauseHistory] = useState(0);
+
 
     const { initPayment, loading: paymentLoading } = useRazorpay();
 
@@ -507,12 +516,20 @@ const MySubscription = () => {
                                         View Transactions
                                     </button>
                                     <button
+                                        onClick={() => setIsPauseModalOpen(true)}
+                                        className="inline-flex items-center px-4 py-2 border border-orange-200 shadow-sm text-sm font-medium rounded-md text-orange-700 bg-orange-50 hover:bg-orange-100"
+                                    >
+                                        <Clock className="h-4 w-4 mr-2" />
+                                        Pause Delivery
+                                    </button>
+                                    <button
                                         onClick={handleCancel}
                                         className="inline-flex items-center px-4 py-2 border border-rose-200 shadow-sm text-sm font-medium rounded-md text-rose-700 bg-rose-50 hover:bg-rose-100"
                                     >
                                         <X className="h-4 w-4 mr-2" />
                                         Cancel Subscription
                                     </button>
+
                                 </div>
                             </div>
                         ) : null}
@@ -566,7 +583,24 @@ const MySubscription = () => {
                         </div>
                     </div>
                 )}
+
+                {/* Pause History Section */}
+                {subscription.status === 'Active' && (
+                    <PauseHistory refreshTrigger={refreshPauseHistory} />
+                )}
             </div>
+
+            {/* Pause Delivery Modal */}
+            <PauseDeliveryModal
+                isOpen={isPauseModalOpen}
+                onClose={() => setIsPauseModalOpen(false)}
+                subscription={subscription}
+                onSuccess={() => {
+                    setRefreshPauseHistory(prev => prev + 1);
+                    fetchSubscriptionData(); // Refresh sub status if needed, though pause doesn't change sub status usually
+                }}
+            />
+
 
             {/* Upgrade Modal */}
             <Modal

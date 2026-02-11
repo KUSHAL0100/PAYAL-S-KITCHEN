@@ -3,6 +3,8 @@ import axios from 'axios';
 import { Plus, Trash2, Edit2, Check, X, Package, Calendar, Clock, MessageSquare, Filter, Tag, Users, LayoutDashboard, TrendingUp, AlertCircle, CreditCard, Utensils, RefreshCw, ChevronRight, Activity, PieChart } from 'lucide-react';
 import AuthContext from '../../context/AuthContext';
 import NotificationContext from '../../context/NotificationContext';
+import DeliveryScheduleTab from './DeliveryScheduleTab';
+
 
 const CompactAddress = ({ address, label }) => {
     if (!address?.street) return null;
@@ -471,8 +473,10 @@ const AdminDashboard = () => {
                             { id: 'plans', icon: PieChart, label: 'Plans' },
                             { id: 'complaints', icon: MessageSquare, label: 'Complaints' },
                             { id: 'discounts', icon: Tag, label: 'Discounts' },
+                            { id: 'schedule', icon: Calendar, label: 'Schedule' },
                             { id: 'subscriptions', icon: CreditCard, label: 'Subscriptions' },
                             { id: 'refunds', icon: RefreshCw, label: 'Refunds' },
+
                             { id: 'menus', icon: Utensils, label: 'Menus' },
                         ].map((tab) => (
                             <button
@@ -728,7 +732,11 @@ const AdminDashboard = () => {
                     </div>
                 )}
 
+                {/* --- Schedule Tab --- */}
+                {activeTab === 'schedule' && <DeliveryScheduleTab />}
+
                 {/* --- Orders Tab --- */}
+
                 {activeTab === 'orders' && (
                     <div className="bg-white shadow overflow-hidden sm:rounded-lg">
                         <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4">
