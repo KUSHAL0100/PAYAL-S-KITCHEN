@@ -20,14 +20,23 @@ const getDeliverySchedule = async (req, res) => {
         const endOfDay = new Date(targetDate);
         endOfDay.setHours(23, 59, 59, 999);
 
-        // 1. Fetch Active Subscriptions covering this date
-        //    (Active, startDate <= target <= endDate)
+        // 1. Fetch Subscriptions that were active on this date
+        //    (Includes Active, and those that were Cancelled/Upgraded/Expired AFTER the target date)
         const activeSubs = await Subscription.find({
-            status: 'Active',
             startDate: { $lte: endOfDay },
-            endDate: { $gte: startOfDay }
+            $or: [
+                {
+                    status: 'Active',
+                    endDate: { $gte: startOfDay }
+                },
+                {
+                    status: { $in: ['Cancelled', 'Upgraded', 'Expired'] },
+                    endDate: { $gte: startOfDay },
+                    updatedAt: { $gte: startOfDay }
+                }
+            ]
         }).populate('user', 'name email phone addresses')
-          .populate('plan', 'name');
+            .populate('plan', 'name');
 
         // 2. Fetch Active Pauses for this date
         const activePauses = await DeliveryPause.find({
@@ -38,8 +47,27 @@ const getDeliverySchedule = async (req, res) => {
 
         const pausedSubIds = activePauses.map(p => p.subscription.toString());
 
-        // 3. Filter Subs (remove paused ones)
-        const validSubs = activeSubs.filter(sub => !pausedSubIds.includes(sub._id.toString()));
+        // 3. Filter Subs (remove paused ones) and Resolve overlaps
+        //    (On transition days like Upgrades, a user might have two valid records. 
+        //     We pick the most relevant one: Active > Cancelled > Upgraded > Expired, then Latest Updated)
+        const subsByUser = {};
+        activeSubs.forEach(sub => {
+            if (!sub.user || pausedSubIds.includes(sub._id.toString())) return;
+
+            const userId = sub.user._id.toString();
+            const currentBest = subsByUser[userId];
+
+            const statusPriority = { 'Active': 4, 'Cancelled': 3, 'Upgraded': 2, 'Expired': 1 };
+            
+            if (!currentBest || 
+                statusPriority[sub.status] > statusPriority[currentBest.status] ||
+                (statusPriority[sub.status] === statusPriority[currentBest.status] && sub.updatedAt > currentBest.updatedAt)
+            ) {
+                subsByUser[userId] = sub;
+            }
+        });
+
+        const validSubs = Object.values(subsByUser);
 
         // 4. Fetch Orders (Single/Event) for this date
         //    Confirmed, Paid, Type=single/event, and has item for this date
@@ -101,17 +129,20 @@ const getDeliverySchedule = async (req, res) => {
                 if (sub.mealType === 'both') items = [...(lunch || []), ...(dinner || [])];
                 else items = (sub.mealType === 'lunch' ? lunch : dinner) || [];
             }
-
+            
             schedule[planType].push({
                 _id: sub._id,
-                type: 'Subscription',
-                customerName: sub.user?.name || 'Unknown',
+                type: "Subscription",
+                customerName: sub.user?.name || "Unknown",
                 phone: sub.user?.phone,
-                address: sub.mealType === 'dinner' ? sub.dinnerAddress : sub.lunchAddress,
+
+                lunchAddress: sub.lunchAddress,
+                dinnerAddress: sub.dinnerAddress,
                 mealType: sub.mealType,
                 items,
-                quantity: 1 // Always 1 person for subscription
+                quantity: 1
             });
+
         });
 
         // --- Process Orders ---

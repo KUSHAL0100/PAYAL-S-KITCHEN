@@ -5,8 +5,9 @@ import {
     AlertCircle, Search, Filter, ChevronRight, CheckCircle2,
     Truck, Clock, Star, Info, TrendingUp, X
 } from 'lucide-react';
+import AddressBlock from '../../components/AddressBlock';
 
-const DeliveryDetailModal = ({ item, isOpen, onClose, renderAddress }) => {
+const DeliveryDetailModal = ({ item, isOpen, onClose }) => {
     if (!isOpen || !item) return null;
 
     return (
@@ -45,7 +46,11 @@ const DeliveryDetailModal = ({ item, isOpen, onClose, renderAddress }) => {
                             <MapPin className="h-4 w-4 text-blue-500" /> Delivery Location
                         </h4>
                         <div className="p-5 bg-gray-50 rounded-2xl border border-gray-100 italic font-medium text-gray-700 leading-relaxed break-words">
-                            {renderAddress(item.address)}
+                            <AddressBlock
+                                mealType={item.mealType}
+                                lunchAddress={item.lunchAddress || item.address}
+                                dinnerAddress={item.dinnerAddress || item.address}
+                            />
                         </div>
                     </div>
 
@@ -133,12 +138,6 @@ const DeliveryScheduleTab = () => {
         fetchSchedule();
     }, [fetchSchedule]);
 
-    const renderAddress = (addr) => {
-        if (!addr) return 'No Address Specified';
-        if (typeof addr === 'string') return addr;
-        const parts = [addr.street, addr.city, addr.zip].filter(Boolean);
-        return parts.length > 0 ? parts.join(', ') : 'Incomplete Address';
-    };
 
     const filterItems = (items) => {
         if (!searchTerm) return items;
@@ -283,9 +282,12 @@ const DeliveryScheduleTab = () => {
                                             </div>
 
                                             <div className="p-3 bg-white/5 rounded-xl border border-white/5 mb-4 group-hover:bg-white/10 transition-all">
-                                                <p className="text-[10px] font-bold leading-tight text-gray-300">
-                                                    {renderAddress(item.address)}
-                                                </p>
+                                                <AddressBlock
+                                                    mealType={item.mealType}
+                                                    lunchAddress={item.lunchAddress || item.address}
+                                                    dinnerAddress={item.dinnerAddress || item.address}
+                                                    variant="dark"
+                                                />
                                             </div>
 
                                             <div className="flex flex-wrap gap-1.5">
@@ -356,9 +358,11 @@ const DeliveryScheduleTab = () => {
                                                         </div>
 
                                                         <div className="p-3 bg-gray-50 rounded-xl border border-gray-50 group-hover:bg-white transition-all mb-3">
-                                                            <p className="text-[10px] font-bold text-gray-600 leading-tight">
-                                                                {renderAddress(item.address)}
-                                                            </p>
+                                                            <AddressBlock
+                                                                mealType={item.mealType}
+                                                                lunchAddress={item.lunchAddress || item.address}
+                                                                dinnerAddress={item.dinnerAddress || item.address}
+                                                            />
                                                         </div>
 
                                                         <div className="space-y-2">
@@ -410,7 +414,6 @@ const DeliveryScheduleTab = () => {
                 item={detailsItem}
                 isOpen={isDetailsOpen}
                 onClose={closeDetails}
-                renderAddress={renderAddress}
             />
         </div>
     );

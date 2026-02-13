@@ -4,26 +4,9 @@ import { Plus, Trash2, Edit2, Check, X, Package, Calendar, Clock, MessageSquare,
 import AuthContext from '../../context/AuthContext';
 import NotificationContext from '../../context/NotificationContext';
 import DeliveryScheduleTab from './DeliveryScheduleTab';
+import AddressBlock from '../../components/AddressBlock';
 
 
-const CompactAddress = ({ address, label }) => {
-    if (!address?.street) return null;
-    return (
-        <div className="flex flex-col leading-tight">
-            <div className="flex items-start gap-1">
-                {label && (
-                    <div className="flex flex-col items-center mt-0.5">
-                        {label.split('').map((char, i) => (
-                            <span key={i} className={`text-[8px] font-black ${char === 'L' ? 'text-orange-600' : 'text-blue-600'}`}>{char}</span>
-                        ))}
-                    </div>
-                )}
-                <span className="text-[10px] font-bold text-gray-900 break-words max-w-[150px]">{address.street}</span>
-            </div>
-            <span className="text-[9px] text-gray-500 ml-3 font-medium">{address.city}</span>
-        </div>
-    );
-};
 
 const AdminDashboard = () => {
     const { user } = useContext(AuthContext);
@@ -1190,32 +1173,11 @@ const AdminDashboard = () => {
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 min-w-[200px]">
-                                                        <div className="text-sm text-gray-900">
-                                                            {(() => {
-                                                                const { lunchAddress: l, dinnerAddress: d, mealType: type } = sub;
-                                                                const isDual = l?.street && d?.street && (l.street !== d.street || l.city !== d.city);
-
-                                                                if (type === 'both' && isDual) {
-                                                                    return (
-                                                                        <div className="flex flex-col gap-2 py-1">
-                                                                            <CompactAddress address={l} label="L" />
-                                                                            <div className="border-t border-gray-100 pt-1">
-                                                                                <CompactAddress address={d} label="D" />
-                                                                            </div>
-                                                                        </div>
-                                                                    );
-                                                                }
-
-                                                                const label = type === 'both' ? 'LD' : (type === 'lunch' ? 'L' : 'D');
-                                                                const addr = (type === 'dinner' ? d : l) || l || d;
-
-                                                                return addr?.street ? (
-                                                                    <div className="py-1">
-                                                                        <CompactAddress address={addr} label={label} />
-                                                                    </div>
-                                                                ) : <span className="text-gray-400 text-xs italic">No address set</span>;
-                                                            })()}
-                                                        </div>
+                                                        <AddressBlock
+                                                            mealType={sub.mealType}
+                                                            lunchAddress={sub.lunchAddress}
+                                                            dinnerAddress={sub.dinnerAddress}
+                                                        />
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
