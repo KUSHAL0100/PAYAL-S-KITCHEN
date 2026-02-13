@@ -3,6 +3,7 @@ const Subscription = require('../models/Subscription');
 const User = require('../models/User');
 const razorpayUtil = require('../utils/razorpay');
 const crypto = require('crypto');
+const orderService = require('../services/orderService');
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -107,6 +108,19 @@ const getMyOrders = async (req, res) => {
             .lean(); // Use lean() for faster read-only queries
         res.json(orders);
     } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// @desc    Get logged in user order stats (total success count)
+// @route   GET /api/orders/my-stats
+// @access  Private
+const getMyOrderStats = async (req, res) => {
+    try {
+        const stats = await orderService.getOrderStats(req.user._id);
+        res.json(stats);
+    } catch (error) {
+        console.error('Error fetching order stats:', error);
         res.status(500).json({ message: 'Server Error' });
     }
 };
@@ -402,4 +416,5 @@ module.exports = {
     createRazorpayOrder,
     verifyPayment,
     cancelOrder,
+    getMyOrderStats,
 };

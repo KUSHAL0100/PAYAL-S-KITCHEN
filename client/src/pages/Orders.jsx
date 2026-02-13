@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { calculateCancellationFee } from '../utils/orderUtils';
 
 const Orders = () => {
@@ -12,6 +13,7 @@ const Orders = () => {
     const [loading, setLoading] = useState(true);
     const { user } = useContext(AuthContext);
     const { showNotification } = useContext(NotificationContext);
+    const queryClient = useQueryClient();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -90,6 +92,7 @@ const Orders = () => {
                 }
             }
 
+            queryClient.invalidateQueries({ queryKey: ['orderStats'] });
             // Refresh orders
             const res = await axios.get('http://127.0.0.1:5000/api/orders/myorders', config);
             setOrders(res.data);

@@ -4,11 +4,13 @@ import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
 import { Link } from 'react-router-dom';
 import { User, Mail, Phone, MapPin, Lock, Save, Plus, Trash2 } from 'lucide-react';
+import { useOrderStats } from '../hooks/useOrders';
 
 const Profile = () => {
     const { user, setUser } = useContext(AuthContext);
     const { showNotification } = useContext(NotificationContext);
     const [loading, setLoading] = useState(false);
+    const { data: stats, isLoading: statsLoading } = useOrderStats();
 
     const [formData, setFormData] = useState({
         name: '',
@@ -115,7 +117,9 @@ const Profile = () => {
                             <div className="mt-8 pt-8 border-t border-gray-50 grid grid-cols-2 gap-4">
                                 <div>
                                     <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Orders</div>
-                                    <div className="text-lg font-black text-gray-900">12</div>
+                                    <div className="text-lg font-black text-gray-900">
+                                        {statsLoading ? '...' : stats?.totalSuccessfulOrders || 0}
+                                    </div>
                                 </div>
                                 <div className="border-l border-gray-50">
                                     <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Status</div>

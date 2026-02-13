@@ -5,6 +5,9 @@ import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { NotificationProvider } from './context/NotificationContext';
 import Notification from './components/Notification';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
 
 import Home from './pages/Home';
 import Menu from './pages/Menu';
@@ -27,47 +30,49 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
-    <AuthProvider>
-      <NotificationProvider>
-        <CartProvider>
-          <Router>
-            <Layout>
-              <Notification />
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/menu" element={<Menu />} />
-                <Route path="/plans" element={<Plans />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/orders" element={<Orders />} />
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <NotificationProvider>
+          <CartProvider>
+            <Router>
+              <Layout>
+                <Notification />
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/menu" element={<Menu />} />
+                  <Route path="/plans" element={<Plans />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/orders" element={<Orders />} />
 
-                <Route path="/events" element={<EventCatering />} />
-                <Route path="/complaints" element={<Complaints />} />
-                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                <Route path="/my-subscription" element={<ProtectedRoute><MySubscription /></ProtectedRoute>} />
-                <Route
-                  path="/admin"
-                  element={
-                    <ProtectedRoute roles={['admin']}>
-                      <AdminDashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/employee"
-                  element={
-                    <ProtectedRoute roles={['employee', 'admin']}>
-                      <EmployeeDashboard />
-                    </ProtectedRoute>
-                  }
-                />
-              </Routes>
-            </Layout>
-          </Router>
-        </CartProvider>
-      </NotificationProvider>
-    </AuthProvider>
+                  <Route path="/events" element={<EventCatering />} />
+                  <Route path="/complaints" element={<Complaints />} />
+                  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                  <Route path="/my-subscription" element={<ProtectedRoute><MySubscription /></ProtectedRoute>} />
+                  <Route
+                    path="/admin"
+                    element={
+                      <ProtectedRoute roles={['admin']}>
+                        <AdminDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/employee"
+                    element={
+                      <ProtectedRoute roles={['employee', 'admin']}>
+                        <EmployeeDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                </Routes>
+              </Layout>
+            </Router>
+          </CartProvider>
+        </NotificationProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

@@ -4,6 +4,7 @@ import CartContext from '../context/CartContext';
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
 import axios from 'axios';
+import { useQueryClient } from '@tanstack/react-query';
 import { Trash2, Plus, Minus, Tag, X, MapPin, CheckCircle } from 'lucide-react';
 import AddressSelector from '../components/AddressSelector';
 import useRazorpay from '../hooks/useRazorpay';
@@ -12,6 +13,7 @@ const Cart = () => {
     const { cartItems, removeFromCart, updateQuantity, getCartTotal, clearCart } = useContext(CartContext);
     const { user } = useContext(AuthContext);
     const { showNotification } = useContext(NotificationContext);
+    const queryClient = useQueryClient();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -220,6 +222,7 @@ const Cart = () => {
 
                     await axios.post('http://127.0.0.1:5000/api/orders', finalOrderData, config);
 
+                    queryClient.invalidateQueries({ queryKey: ['orderStats'] });
                     clearCart();
                     showNotification('Order placed successfully!', 'success');
                     navigate('/orders');

@@ -4,6 +4,7 @@ import { Check, AlertCircle, MapPin, CheckCircle, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
+import { useQueryClient } from '@tanstack/react-query';
 import { canUpgradeToPlan, MEAL_PRICE_MULTIPLIER } from '../utils/orderUtils';
 import AddressSelector from '../components/AddressSelector';
 import Modal from '../components/Modal';
@@ -18,6 +19,7 @@ const Plans = () => {
     const [currentSubscription, setCurrentSubscription] = useState(null);
     const { user } = useContext(AuthContext);
     const { showNotification } = useContext(NotificationContext);
+    const queryClient = useQueryClient();
     const navigate = useNavigate();
 
     const [selectedPlan, setSelectedPlan] = useState(null);
@@ -182,6 +184,7 @@ const Plans = () => {
 
                 await axios.post('http://127.0.0.1:5000/api/subscriptions/verify', verifyPayload, config);
 
+                queryClient.invalidateQueries({ queryKey: ['orderStats'] });
                 showNotification('Subscription upgraded successfully! (Free upgrade)', 'success');
                 navigate('/my-subscription');
                 return;
@@ -205,6 +208,7 @@ const Plans = () => {
                 metadata: paymentMetadata,
                 showNotification,
                 onSuccess: (data) => {
+                    queryClient.invalidateQueries({ queryKey: ['orderStats'] });
                     showNotification('Subscription successful! Redirecting...', 'success');
                     navigate('/my-subscription');
                 },

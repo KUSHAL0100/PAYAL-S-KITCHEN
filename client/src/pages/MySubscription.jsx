@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Calendar, AlertCircle, RefreshCw, TrendingUp, X, Info, CheckCircle, ClipboardList, Clock } from 'lucide-react';
 
 import AuthContext from '../context/AuthContext';
@@ -17,6 +18,7 @@ import useRazorpay from '../hooks/useRazorpay';
 const MySubscription = () => {
     const { user } = useContext(AuthContext);
     const { showNotification } = useContext(NotificationContext);
+    const queryClient = useQueryClient();
     const navigate = useNavigate();
 
     const [subscription, setSubscription] = useState(null);
@@ -188,6 +190,7 @@ const MySubscription = () => {
                 },
                 showNotification,
                 onSuccess: (data) => {
+                    queryClient.invalidateQueries({ queryKey: ['orderStats'] });
                     showNotification('Subscription upgraded successfully!', 'success');
                     fetchSubscriptionData();
                     setSelectedUpgradePlan(null);
@@ -223,6 +226,7 @@ const MySubscription = () => {
                 config
             );
 
+            queryClient.invalidateQueries({ queryKey: ['orderStats'] });
             showNotification('Subscription cancelled successfully', 'success');
             fetchSubscriptionData();
         } catch (error) {
