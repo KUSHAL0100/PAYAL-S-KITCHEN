@@ -13,13 +13,16 @@ const {
 } = require('../controllers/orderController');
 const { protect, admin, employee } = require('../middleware/authMiddleware');
 
+// Specific paths FIRST (before /:id wildcard)
 router.route('/').post(protect, createOrder).get(protect, employee, getOrders);
 router.route('/myorders').get(protect, getMyOrders);
 router.route('/my-stats').get(protect, getMyOrderStats);
+router.route('/razorpay').post(protect, createRazorpayOrder);
+router.route('/verify').post(protect, verifyPayment);
+
+// Wildcard /:id routes LAST
 router.route('/:id').get(protect, getOrderById);
 router.route('/:id/status').put(protect, employee, updateOrderStatus);
 router.route('/:id/cancel').put(protect, cancelOrder);
-router.route('/razorpay').post(protect, createRazorpayOrder);
-router.route('/verify').post(protect, verifyPayment);
 
 module.exports = router;

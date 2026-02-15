@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
 import { useMyOrders, useCancelOrder } from '../hooks/useOrders';
-import { calculateCancellationFee } from '../utils/orderUtils';
+import { calculateCancellationFee, isOrderPastDelivery } from '../utils/orderUtils';
 
 const Orders = () => {
     const { user } = useContext(AuthContext);
@@ -135,15 +135,17 @@ const Orders = () => {
                                         <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] shadow-sm ${order.status === 'Cancelled' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
                                             order.status === 'Rejected' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
                                                 order.status === 'Upgraded' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
-                                                    'bg-amber-50 text-amber-600 border border-amber-100'
+                                                    (order.status === 'Confirmed' && isOrderPastDelivery(order)) ? 'bg-green-50 text-green-600 border border-green-100' :
+                                                        'bg-amber-50 text-amber-600 border border-amber-100'
                                             }`}>
-                                            {order.status}
+                                            {(order.status === 'Confirmed' && isOrderPastDelivery(order)) ? 'Delivered' : order.status}
                                         </span>
 
                                         {/* Show Cancel button for all except Cancelled and Upgraded orders */}
                                         {order.status !== 'Cancelled' &&
                                             order.status !== 'Rejected' &&
-                                            order.status !== 'Upgraded' && (
+                                            order.status !== 'Upgraded' &&
+                                            !isOrderPastDelivery(order) && (
                                                 <button
                                                     onClick={() => handleCancelOrder(order)}
                                                     className="px-4 py-1.5 bg-white border border-rose-200 text-rose-500 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-colors shadow-sm active:scale-95"
@@ -175,7 +177,7 @@ const Orders = () => {
                                                         )}
                                                         {item.deliveryDate && (
                                                             <p className="text-[10px] font-bold text-teal-600 mt-1 pl-7">
-                                                                Delivery: {new Date(item.deliveryDate).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                                                                Delivery: {new Date(item.deliveryDate).toLocaleDateString(undefined, { dateStyle: 'medium' })} {item.deliveryTime && `@ ${item.deliveryTime}`}
                                                             </p>
                                                         )}
                                                     </div>

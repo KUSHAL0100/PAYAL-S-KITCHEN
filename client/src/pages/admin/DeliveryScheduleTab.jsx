@@ -62,6 +62,10 @@ const DeliveryDetailModal = ({ item, isOpen, onClose }) => {
                                 <h4 className="text-2xl font-black text-blue-700">{item.quantity || 1} Persons</h4>
                             </div>
                         )}
+                        <div className="p-5 bg-indigo-50 rounded-2xl border border-indigo-100">
+                            <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1">Schedule</p>
+                            <h4 className="text-2xl font-black text-indigo-700">{item.deliveryTime}</h4>
+                        </div>
                         <div className="p-5 bg-orange-50 rounded-2xl border border-orange-100">
                             <p className="text-[9px] font-black text-orange-400 uppercase tracking-widest mb-1">Status</p>
                             <h4 className="text-2xl font-black text-orange-700 capitalize">Confirmed</h4>
@@ -260,8 +264,9 @@ const DeliveryScheduleTab = () => {
                                     >
                                         <div className="relative z-10">
                                             <div className="flex justify-between items-start mb-4">
-                                                <div className="p-2 bg-white/10 rounded-xl">
-                                                    <Utensils className="h-4 w-4 text-orange-400" />
+                                                <div className="p-2 bg-white/10 rounded-xl flex items-center gap-2">
+                                                    <Clock className="h-4 w-4 text-orange-400" />
+                                                    <span className="text-xs font-black">{item.deliveryTime}</span>
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-[8px] font-black text-orange-400 uppercase tracking-widest">Total Persons</p>
@@ -379,13 +384,18 @@ const DeliveryScheduleTab = () => {
                                                         </div>
 
                                                         <div className="mt-4 pt-3 border-t border-gray-50 flex items-center justify-between">
-                                                            <div className={`px-2.5 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest
-                                                                ${item.mealType === 'lunch' ? 'bg-amber-100 text-amber-600' : ''}
-                                                                ${item.mealType === 'dinner' ? 'bg-indigo-100 text-indigo-600' : ''}
-                                                                ${item.mealType === 'both' ? 'bg-green-100 text-green-600' : ''}
-                                                                ${item.mealType === 'event' ? 'bg-gray-100 text-gray-600' : ''}
-                                                            `}>
-                                                                {item.mealType}
+                                                            <div className="flex items-center gap-2">
+                                                                <div className={`px-2.5 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest
+                                                                    ${item.mealType === 'lunch' ? 'bg-amber-100 text-amber-600' : ''}
+                                                                    ${item.mealType === 'dinner' ? 'bg-indigo-100 text-indigo-600' : ''}
+                                                                    ${item.mealType === 'both' ? 'bg-green-100 text-green-600' : ''}
+                                                                    ${item.mealType === 'event' ? 'bg-gray-100 text-gray-600' : ''}
+                                                                `}>
+                                                                    {item.mealType}
+                                                                </div>
+                                                                <span className="text-[9px] font-black text-gray-400 flex items-center gap-1">
+                                                                    <Clock className="h-3 w-3" /> {item.deliveryTime}
+                                                                </span>
                                                             </div>
                                                             <button
                                                                 onClick={(e) => {

@@ -6,7 +6,8 @@ const orderSchema = mongoose.Schema({
         name: String,
         quantity: Number,
         selectedItems: mongoose.Schema.Types.Mixed, // Store complex items (events, menus, etc)
-        deliveryDate: { type: Date, required: true }
+        deliveryDate: { type: Date, required: true },
+        deliveryTime: { type: String } // e.g., '12:00 PM', '8:00 PM', or custom for events
     }],
     price: { type: Number, required: true },
     proRataCredit: { type: Number, default: 0 },

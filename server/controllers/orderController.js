@@ -33,8 +33,16 @@ const createOrder = async (req, res) => {
         if (!item.deliveryDate) continue;
         const itemDelivery = new Date(item.deliveryDate);
 
-        // Event item validation (48 hours)
+        // Event item validation (48 hours before event time)
         if (item.name === 'Event Catering' || (item.selectedItems && item.selectedItems.name && item.selectedItems.name.toLowerCase().includes('event'))) {
+            // Use deliveryTime if available, otherwise compare against the date at 12 PM
+            if (item.deliveryTime) {
+                const datePart = itemDelivery.toISOString().split('T')[0];
+                const parsed = new Date(`${datePart} ${item.deliveryTime}`);
+                if (!isNaN(parsed.getTime())) itemDelivery.setTime(parsed.getTime());
+            } else {
+                itemDelivery.setHours(12, 0, 0, 0);
+            }
             const diffInHours = (itemDelivery - now) / 1000 / 60 / 60;
             if (diffInHours < 48) {
                 return res.status(400).json({ message: 'Event catering items must be placed at least 48 hours in advance.' });
@@ -94,6 +102,7 @@ const createOrder = async (req, res) => {
         const createdOrder = await order.save();
         res.status(201).json(createdOrder);
     } catch (error) {
+        console.error('Order creation failed:', error.message);
         res.status(400).json({ message: 'Invalid order data', error: error.message });
     }
 };
@@ -292,59 +301,43 @@ const cancelOrder = async (req, res) => {
         let refundAmount = 0;
         const total = parseFloat(order.totalAmount) || 0;
 
-        // Enforce No Refund policy for subscriptions
+        // 1) Subscriptions → No refund ever
         if (order.type === 'subscription_purchase' || order.type === 'subscription_upgrade') {
             cancellationFee = total;
             refundAmount = 0;
+
+        // 2) Pending → Full refund (admin hasn't approved yet)
         } else if (order.status === 'Pending') {
-            // Pending orders: 0% fee, 100% refund
             cancellationFee = 0;
             refundAmount = total;
+
+        // 3) Confirmed → Check how many hours are left before delivery
         } else {
-            // Confirmed orders: Time-based cancellation fees
             const now = new Date();
 
-            // Find earliest delivery date to be conservative/strict
-            let earliestDelivery = null;
-            if (order.items && order.items.length > 0) {
-                order.items.forEach(item => {
-                    if (item.deliveryDate) {
-                        const d = new Date(item.deliveryDate);
-                        if (!earliestDelivery || d < earliestDelivery) {
-                            earliestDelivery = d;
-                        }
+            // Get the earliest delivery date from items, default to 12 PM if no time stored
+            const deliveryDates = (order.items || [])
+                .filter(item => item.deliveryDate)
+                .map(item => {
+                    const d = new Date(item.deliveryDate);
+                    if (!item.deliveryTime) {
+                        d.setHours(12, 0, 0, 0); // Default: 12 PM
                     }
+                    return d;
                 });
-            }
-            // Fallback if no delivery dates found (legacy orders?)
-            if (!earliestDelivery) {
-                // Try payment date + 24h? or just skip check?
-                // Use createdAt as fallback for very old data?
-                // Let's use a default if missing to avoid crash, assume strict policy
-                earliestDelivery = new Date(order.createdAt);
-                earliestDelivery.setDate(earliestDelivery.getDate() + 1);
-            }
 
-            const diffInHours = (earliestDelivery - now) / (1000 * 60 * 60);
+            const earliestDelivery = deliveryDates.length > 0
+                ? new Date(Math.min(...deliveryDates))
+                : new Date(order.createdAt.getTime() + 24 * 60 * 60 * 1000); // fallback: +1 day
 
-            if (order.type === 'event') {
-                // Event orders: 100% fee if < 5 hours, 20% fee otherwise
-                cancellationFee = diffInHours < 5 ? total : total * 0.20;
-            } else if (order.type === 'single') {
-                // Single orders: 100% fee if < 2 hours, 20% fee otherwise
-                cancellationFee = diffInHours < 2 ? total : total * 0.20;
-            } else {
-                // Other types: 20% fee
-                cancellationFee = total * 0.20;
-            }
+            const hoursLeft = (earliestDelivery - now) / (1000 * 60 * 60);
 
-            // Ensure precise math
-            if (cancellationFee >= total) {
-                cancellationFee = total;
-                refundAmount = 0;
-            } else {
-                refundAmount = total - cancellationFee;
-            }
+            // Single: 2h window | Event: 8h window | Other: only if past
+            const noRefundWindow = order.type === 'event' ? 8 : order.type === 'single' ? 2 : 0;
+            const isLate = hoursLeft < noRefundWindow;
+
+            cancellationFee = isLate ? total : total * 0.20;
+            refundAmount = isLate ? 0 : total - cancellationFee;
         }
 
         // Process refund via Razorpay

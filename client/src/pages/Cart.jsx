@@ -152,9 +152,6 @@ const Cart = () => {
                 metadata: { deliveryAddress, type: orderType },
                 showNotification,
                 onSuccess: async (verificationData, razorpayRawResponse) => {
-                    // The hook handles verification POST to /api/orders/verify
-                    // Note: verificationData is from backend, razorpayRawResponse is from SDK (has payment_id)
-
                     const dbOrderItems = cartItems.map(item => {
                         let itemDeliveryDate = new Date();
                         if (item.deliveryDate) {
@@ -168,19 +165,20 @@ const Cart = () => {
                                 name: 'Event Catering',
                                 quantity: item.guestCount,
                                 selectedItems: { name: item.items.map(i => i.name).join(', ') },
-                                deliveryDate: itemDeliveryDate
+                                deliveryDate: itemDeliveryDate,
+                                deliveryTime: item.deliveryTime || '12:00 PM'
                             };
                         } else {
                             return {
                                 name: item.name,
                                 quantity: item.quantity,
                                 selectedItems: { name: (item.menuItems || []).join(', ') },
-                                deliveryDate: itemDeliveryDate
+                                deliveryDate: itemDeliveryDate,
+                                deliveryTime: item.mealTime === 'Lunch' ? '12:00 PM' : '8:00 PM'
                             };
                         }
                     });
 
-                    // Payment date is essentially the current time of transaction
                     const paymentDate = new Date();
 
                     const finalOrderData = {
@@ -196,12 +194,18 @@ const Cart = () => {
                         couponCode: appliedCoupon ? appliedCoupon.code : null
                     };
 
-                    await axios.post('http://127.0.0.1:5000/api/orders', finalOrderData, config);
-
-                    queryClient.invalidateQueries({ queryKey: ['orderStats'] });
-                    clearCart();
-                    showNotification('Order placed successfully!', 'success');
-                    navigate('/orders');
+                    try {
+                        await axios.post('http://127.0.0.1:5000/api/orders', finalOrderData, config);
+                        queryClient.invalidateQueries({ queryKey: ['orderStats'] });
+                        clearCart();
+                        showNotification('Order placed successfully!', 'success');
+                        navigate('/orders');
+                    } catch (orderErr) {
+                        console.error('Order save failed:', orderErr);
+                        const msg = orderErr.response?.data?.error || orderErr.response?.data?.message || 'Failed to save order';
+                        showNotification('Payment done but order save failed: ' + msg, 'error');
+                        setError('Payment succeeded but order could not be saved: ' + msg);
+                    }
                 },
                 onError: (err) => {
                     setError('Payment failed. Please try again.');

@@ -41,7 +41,7 @@ export const calculateCancellationFee = (order) => {
     let refundAmount = 0;
     let percentage = '0%';
 
-    // Policy: Subscriptions have a NO REFUND policy regardless of status or timing
+    // Policy: Subscriptions have a NO REFUND policy
     if (order.type === 'subscription_purchase' || order.type === 'subscription_upgrade') {
         cancellationFee = totalAmount;
         refundAmount = 0;
@@ -55,26 +55,59 @@ export const calculateCancellationFee = (order) => {
     } else {
         // Time-based cancellation fees for Approved orders
         const now = new Date();
-        const deliveryDate = new Date(order.deliveryDate);
-        const diffInMs = deliveryDate - now;
+
+        // Find earliest delivery date/time
+        let earliestDelivery = null;
+        if (order.items && order.items.length > 0) {
+            order.items.forEach(item => {
+                if (item.deliveryDate) {
+                    const d = new Date(item.deliveryDate);
+                    
+                    if (item.deliveryTime) {
+                        const datePart = d.toISOString().split('T')[0];
+                        const timeStr = item.deliveryTime.trim();
+                        const combinedDate = new Date(`${datePart} ${timeStr}`);
+                        
+                        if (!isNaN(combinedDate.getTime())) {
+                            earliestDelivery = (!earliestDelivery || combinedDate < earliestDelivery) ? combinedDate : earliestDelivery;
+                            return;
+                        }
+                    }
+
+                    // Default fallback (12 PM)
+                    d.setHours(12, 0, 0, 0);
+                    if (!earliestDelivery || d < earliestDelivery) {
+                        earliestDelivery = d;
+                    }
+                }
+            });
+        }
+
+        if (!earliestDelivery) {
+            earliestDelivery = new Date(order.createdAt);
+            earliestDelivery.setDate(earliestDelivery.getDate() + 1);
+        }
+
+        const diffInMs = earliestDelivery - now;
         const diffInHours = diffInMs / (1000 * 60 * 60);
 
         let isLateCancellation = false;
 
         if (order.type === 'event') {
-            // Event: < 5 hours
-            isLateCancellation = diffInHours < 5;
+            // Event: < 8 hours OR already passed
+            isLateCancellation = diffInHours < 8;
         } else if (order.type === 'single') {
-            // Single/Custom: < 2 hours
+            // Single: < 2 hours OR already passed
             isLateCancellation = diffInHours < 2;
+        } else {
+            isLateCancellation = diffInHours < 0; // Past delivery
         }
 
         if (isLateCancellation) {
-            cancellationFee = totalAmount; // 100% fee
+            cancellationFee = totalAmount;
             refundAmount = 0;
             percentage = '100%';
         } else {
-            // 20% Fee calculation
             cancellationFee = totalAmount * 0.20;
             refundAmount = totalAmount - cancellationFee;
             percentage = '20%';
@@ -85,16 +118,25 @@ export const calculateCancellationFee = (order) => {
     const feeDisplay = cancellationFee > 0 ? `₹${cancellationFee.toFixed(2)}` : '₹0.00';
     const refundDisplay = refundAmount > 0 ? `₹${refundAmount.toFixed(2)}` : '₹0.00';
 
-    const message = cancellationFee > 0
-        ? `⚠️ Cancellation Fee Applies\n\n` +
-        `• Order Total: ₹${totalAmount.toFixed(2)}\n` +
-        `• Cancellation Fee (${percentage}): -${feeDisplay}\n` +
-        `• Refund Amount: ${refundDisplay}\n\n` +
-        `Are you sure you want to cancel?`
-        : `✅ Full Refund Applicable\n\n` +
-        `Total Amount: ₹${totalAmount.toFixed(2)}\n` +
-        `You will receive a full refund of ${refundDisplay}.\n\n` +
-        `Are you sure you want to cancel?`;
+    let message = '';
+    if (cancellationFee >= totalAmount) {
+        message = `⚠️ Non-Refundable Window\n\n` +
+            `This order is within the 100% cancellation fee window or has already passed.\n\n` +
+            `• Order Total: ₹${totalAmount.toFixed(2)}\n` +
+            `• Refund Amount: ₹0.00\n\n` +
+            `Are you sure you want to cancel? (No refund will be issued)`;
+    } else if (cancellationFee > 0) {
+        message = `⚠️ Cancellation Fee Applies\n\n` +
+            `• Order Total: ₹${totalAmount.toFixed(2)}\n` +
+            `• Cancellation Fee (${percentage}): -${feeDisplay}\n` +
+            `• Refund Amount: ${refundDisplay}\n\n` +
+            `Are you sure you want to cancel?`;
+    } else {
+        message = `✅ Full Refund Applicable\n\n` +
+            `Total Amount: ₹${totalAmount.toFixed(2)}\n` +
+            `You will receive a full refund of ${refundDisplay}.\n\n` +
+            `Are you sure you want to cancel?`;
+    }
 
     return {
         cancellationFee,
@@ -169,6 +211,34 @@ export const canUpgradeToPlan = (currentSubscription, newPlan, newMealType = 'bo
         canUpgrade: true,
         reason: 'This is an upgrade! You will be charged the difference.'
     };
+};
+
+/**
+ * Checks if an order's delivery window has passed
+ * @param {Object} order 
+ * @returns {boolean}
+ */
+export const isOrderPastDelivery = (order) => {
+    if (!order.items || order.items.length === 0) return false;
+
+    const now = new Date();
+    // Return true if ANY item's delivery time has passed
+    return order.items.some(item => {
+        if (!item.deliveryDate) return false;
+        const d = new Date(item.deliveryDate);
+        if (item.deliveryTime) {
+            const datePart = d.toISOString().split('T')[0];
+            const timeStr = item.deliveryTime.trim();
+            const combinedDate = new Date(`${datePart} ${timeStr}`);
+            
+            if (!isNaN(combinedDate.getTime())) {
+                return now > combinedDate;
+            }
+        }
+        
+        d.setHours(12, 0, 0, 0);
+        return now > d;
+    });
 };
 
 /**

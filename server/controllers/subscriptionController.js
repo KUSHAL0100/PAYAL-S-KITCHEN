@@ -701,8 +701,6 @@ module.exports = {
     buySubscription,
     verifySubscriptionPayment,
     cancelSubscription,
-    renewSubscription,
-    verifyRenewal,
     getMySubscription,
     getAllSubscriptions,
     adminCancelSubscription,

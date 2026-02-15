@@ -48,6 +48,7 @@ const EventCatering = () => {
     };
 
     const [eventDate, setEventDate] = useState('');
+    const [eventTime, setEventTime] = useState('12:00');
 
     const handleAddToCart = () => {
         if (!eventDate) {
@@ -58,7 +59,8 @@ const EventCatering = () => {
         // 48-Hour Validation
         const now = new Date();
         const targetDate = new Date(eventDate);
-        targetDate.setHours(0, 0, 0, 0); // Start of the event day
+        const [hours, minutes] = eventTime.split(':');
+        targetDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
         const diffInHours = (targetDate - now) / 1000 / 60 / 60;
 
@@ -83,7 +85,8 @@ const EventCatering = () => {
             guestCount: parseInt(guestCount),
             pricePerPlate: calculateTotalPerPlate(),
             totalAmount: calculateGrandTotal(),
-            deliveryDate: eventDate // Pass selected date
+            deliveryDate: eventDate, // Pass selected date
+            deliveryTime: eventTime   // Pass selected time
         };
 
         // Add to cart via Context
@@ -155,6 +158,17 @@ const EventCatering = () => {
                                     min={new Date().toISOString().split('T')[0]}
                                     value={eventDate}
                                     onChange={(e) => setEventDate(e.target.value)}
+                                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm mb-4"
+                                />
+
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Event Time
+                                </label>
+                                <input
+                                    type="time"
+                                    required
+                                    value={eventTime}
+                                    onChange={(e) => setEventTime(e.target.value)}
                                     className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm mb-4"
                                 />
 

@@ -811,7 +811,7 @@ const AdminDashboard = () => {
                                                 </div>
                                                 <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded">
                                                     <p><strong>Items:</strong> {order.items.map(i => {
-                                                        const dateStr = i.deliveryDate ? ` (${new Date(i.deliveryDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})` : '';
+                                                        const dateStr = i.deliveryDate ? ` (${new Date(i.deliveryDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}${i.deliveryTime ? ` @ ${i.deliveryTime}` : ''})` : '';
                                                         return `${i.quantity}x ${i.name}${dateStr}`;
                                                     }).join(', ')}</p>
                                                     {/* Show menu items if available */}

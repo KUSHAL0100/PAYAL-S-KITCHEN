@@ -139,6 +139,7 @@ const getDeliverySchedule = async (req, res) => {
                 lunchAddress: sub.lunchAddress,
                 dinnerAddress: sub.dinnerAddress,
                 mealType: sub.mealType,
+                deliveryTime: sub.mealType === 'lunch' ? '12:00 PM' : sub.mealType === 'dinner' ? '8:00 PM' : 'Lunch & Dinner',
                 items,
                 quantity: 1
             });
@@ -157,6 +158,7 @@ const getDeliverySchedule = async (req, res) => {
             let combinedItems = [];
             let totalPersons = 0;
             let finalPlan = 'Basic';
+            let deliveryTime = '';
             const planPriority = { 'Events': 4, 'Exotic': 3, 'Premium': 2, 'Basic': 1 };
 
             daysItems.forEach(item => {
@@ -172,7 +174,12 @@ const getDeliverySchedule = async (req, res) => {
                 // Extract Breakdown but only count quantity as persons
                 const names = extractItemNames(item);
                 combinedItems.push(...names);
-                totalPersons += (item.quantity || 1); 
+                totalPersons += (item.quantity || 1);
+                
+                // Set delivery time from item (use the first one found or concatenate if different)
+                if (item.deliveryTime && !deliveryTime.includes(item.deliveryTime)) {
+                    deliveryTime = deliveryTime ? `${deliveryTime}, ${item.deliveryTime}` : item.deliveryTime;
+                }
             });
 
             schedule[finalPlan].push({
@@ -183,7 +190,8 @@ const getDeliverySchedule = async (req, res) => {
                 address: order.deliveryAddress,
                 items: combinedItems,
                 quantity: totalPersons,
-                mealType: order.type === 'event' ? 'event' : 'single'
+                mealType: order.type === 'event' ? 'event' : 'single',
+                deliveryTime: deliveryTime || '12:00 PM'
             });
         });
 
