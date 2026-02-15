@@ -1,17 +1,14 @@
-import React, { useState, useEffect, useContext, useMemo } from 'react';
-import axios from 'axios';
-import { Calendar, ChevronLeft, ChevronRight, Star, X, ShoppingCart } from 'lucide-react';
+import React, { useState, useContext, useMemo } from 'react';
+import { Calendar, ChevronLeft, ChevronRight, Star, ShoppingCart } from 'lucide-react';
 import CartContext from '../context/CartContext';
 import NotificationContext from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { validateOrderTime } from '../utils/orderUtils';
 import Modal from '../components/Modal';
+import { useTodaysMenu, useWeeklyMenu, useDateMenu } from '../hooks/useMenu';
 
 const Menu = () => {
     const [selectedPlan, setSelectedPlan] = useState('Basic');
-    const [weeklyMenu, setWeeklyMenu] = useState([]);
-    const [todaysMenu, setTodaysMenu] = useState(null);
-    const [loading, setLoading] = useState(true);
     const [currentDate, setCurrentDate] = useState(new Date());
 
     // Single Tiffin Order State
@@ -19,68 +16,22 @@ const Menu = () => {
     const [orderMealTime, setOrderMealTime] = useState('Lunch');
     const [orderQuantity, setOrderQuantity] = useState(1);
     const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
-    const [selectedDateMenu, setSelectedDateMenu] = useState(null);
-    const [loadingSelectedMenu, setLoadingSelectedMenu] = useState(false);
+
     const { addToCart } = useContext(CartContext);
     const { showNotification } = useContext(NotificationContext);
     const navigate = useNavigate();
+
+    // TanStack Query Hooks
+    const { data: todaysMenu, isLoading: loadingToday } = useTodaysMenu(selectedPlan);
+    const { data: weeklyMenu = [], isLoading: loadingWeekly } = useWeeklyMenu(selectedPlan, currentDate);
+    const { data: selectedDateMenu, isLoading: loadingSelectedMenu } = useDateMenu(selectedPlan, orderDate, isModalOpen);
+
+    const loading = loadingToday || loadingWeekly;
 
     const PLAN_PRICES = {
         'Basic': 120,
         'Premium': 150,
         'Exotic': 200
-    };
-
-    useEffect(() => {
-        fetchMenuData();
-    }, [selectedPlan, currentDate]);
-
-    const fetchMenuData = async () => {
-        setLoading(true);
-        try {
-            // 1. Fetch Today's Menu (Always based on actual today)
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const todayRes = await axios.get(
-                `http://127.0.0.1:5000/api/menu?date=${today.toISOString()}&planType=${selectedPlan}`
-            );
-            if (todayRes.data.length > 0) {
-                setTodaysMenu(todayRes.data[0]);
-            } else {
-                setTodaysMenu(null);
-            }
-
-            // 2. Fetch Representative Weekly Menu for the selected Month
-            const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-
-            const endOfRange = new Date(startOfMonth);
-            endOfRange.setDate(endOfRange.getDate() + 14); // Fetch 2 weeks to ensure we get all weekdays
-
-            const weeklyRes = await axios.get(
-                `http://127.0.0.1:5000/api/menu?startDate=${startOfMonth.toISOString()}&endDate=${endOfRange.toISOString()}&planType=${selectedPlan}`
-            );
-
-            // Process to get one of each weekday
-            const uniqueWeekdays = [];
-
-            // Order: Sunday (0) to Saturday (6)
-            const targetOrder = [0, 1, 2, 3, 4, 5, 6];
-
-            targetOrder.forEach(dayIndex => {
-                const found = weeklyRes.data.find(m => new Date(m.date).getDay() === dayIndex);
-                if (found) {
-                    uniqueWeekdays.push(found);
-                }
-            });
-
-            setWeeklyMenu(uniqueWeekdays);
-
-        } catch (error) {
-            console.error('Error fetching menu:', error);
-            showNotification('Failed to load menu data', 'error');
-        } finally {
-            setLoading(false);
-        }
     };
 
     const handlePrevMonth = () => {
@@ -107,37 +58,7 @@ const Menu = () => {
         return new Date(dateString).getDay();
     }
 
-    const sortedMenu = [...weeklyMenu].sort((a, b) => getDayIndex(a.date) - getDayIndex(b.date));
-
-    // Fetch menu for selected date
-    useEffect(() => {
-        const fetchSelectedDateMenu = async () => {
-            if (!orderDate) return;
-
-            setLoadingSelectedMenu(true);
-            try {
-                const selectedDate = new Date(orderDate);
-                selectedDate.setHours(0, 0, 0, 0);
-                const res = await axios.get(
-                    `http://127.0.0.1:5000/api/menu?date=${selectedDate.toISOString()}&planType=${selectedPlan}`
-                );
-                if (res.data.length > 0) {
-                    setSelectedDateMenu(res.data[0]);
-                } else {
-                    setSelectedDateMenu(null);
-                }
-            } catch (error) {
-                console.error('Error fetching selected date menu:', error);
-                setSelectedDateMenu(null);
-            } finally {
-                setLoadingSelectedMenu(false);
-            }
-        };
-
-        if (isModalOpen) {
-            fetchSelectedDateMenu();
-        }
-    }, [orderDate, selectedPlan, isModalOpen]);
+    const sortedMenu = weeklyMenu; // Already sorted in hook
 
     // Calculate total amount using useMemo to avoid duplication
     const totalOrderAmount = useMemo(() => {

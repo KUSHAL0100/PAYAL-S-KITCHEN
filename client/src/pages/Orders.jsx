@@ -1,43 +1,20 @@
-import React, { useEffect, useState, useContext } from 'react';
-import axios from 'axios';
-import { AlertCircle, Clock, Package, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useContext } from 'react';
+import { AlertCircle, Clock } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
-import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMyOrders, useCancelOrder } from '../hooks/useOrders';
 import { calculateCancellationFee } from '../utils/orderUtils';
 
 const Orders = () => {
-    const [orders, setOrders] = useState([]);
-    const [loading, setLoading] = useState(true);
     const { user } = useContext(AuthContext);
     const { showNotification } = useContext(NotificationContext);
-    const queryClient = useQueryClient();
     const navigate = useNavigate();
 
+    const { data: orders = [], isLoading: loading } = useMyOrders();
+    const cancelOrderMutation = useCancelOrder();
+
     useEffect(() => {
-        const fetchOrders = async () => {
-            try {
-                const config = {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem('token')}`,
-                    },
-                };
-                const res = await axios.get('http://127.0.0.1:5000/api/orders/myorders', config);
-                setOrders(res.data);
-                setLoading(false);
-            } catch (error) {
-                console.error('Error fetching orders:', error);
-                setLoading(false);
-                showNotification('Failed to fetch orders', 'error');
-            }
-        };
-
-        if (user) {
-            fetchOrders();
-        }
-
         // Load Razorpay script
         const script = document.createElement('script');
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -45,9 +22,11 @@ const Orders = () => {
         document.body.appendChild(script);
 
         return () => {
-            document.body.removeChild(script);
+            if (document.body.contains(script)) {
+                document.body.removeChild(script);
+            }
         };
-    }, [user]);
+    }, []);
 
     const handleCancelOrder = async (order) => {
         // Calculate refund using utility function
@@ -56,19 +35,8 @@ const Orders = () => {
         if (!window.confirm(message)) return;
 
         try {
-            const config = {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
-                },
-            };
-
-            const response = await axios.put(
-                `http://127.0.0.1:5000/api/orders/${order._id}/cancel`,
-                {},
-                config
-            );
-
-            const { refund, refundError } = response.data;
+            const data = await cancelOrderMutation.mutateAsync(order._id);
+            const { refund, refundError } = data;
 
             if (refundError) {
                 showNotification(
@@ -81,7 +49,6 @@ const Orders = () => {
                     'success'
                 );
             } else {
-                // If no specific refund object but calculation says there should be one
                 if (refundAmount > 0) {
                     showNotification(
                         `Order cancelled. ₹${refundAmount.toFixed(2)} refund processed.`,
@@ -91,11 +58,6 @@ const Orders = () => {
                     showNotification('Order cancelled.', 'info');
                 }
             }
-
-            queryClient.invalidateQueries({ queryKey: ['orderStats'] });
-            // Refresh orders
-            const res = await axios.get('http://127.0.0.1:5000/api/orders/myorders', config);
-            setOrders(res.data);
         } catch (error) {
             console.error('Error cancelling order:', error);
             showNotification(

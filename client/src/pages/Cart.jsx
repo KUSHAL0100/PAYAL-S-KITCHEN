@@ -1,13 +1,15 @@
 import React, { useContext, useState, useEffect, useMemo } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import CartContext from '../context/CartContext';
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
-import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
-import { Trash2, Plus, Minus, Tag, X, MapPin, CheckCircle } from 'lucide-react';
+import { Trash2, Plus, Minus, Tag, X } from 'lucide-react';
 import AddressSelector from '../components/AddressSelector';
 import useRazorpay from '../hooks/useRazorpay';
+
+import { useActiveCoupons, useValidateCoupon } from '../hooks/useCoupons';
 
 const Cart = () => {
     const { cartItems, removeFromCart, updateQuantity, getCartTotal, clearCart } = useContext(CartContext);
@@ -19,10 +21,13 @@ const Cart = () => {
     const [error, setError] = useState('');
     const { initPayment, loading: paymentLoading } = useRazorpay();
 
+    // TanStack Query Hooks
+    const { data: availableCoupons = [] } = useActiveCoupons();
+    const validateCouponMutation = useValidateCoupon();
+
     // Coupon State
     const [couponCode, setCouponCode] = useState('');
     const [appliedCoupon, setAppliedCoupon] = useState(null);
-    const [availableCoupons, setAvailableCoupons] = useState([]);
     const [couponError, setCouponError] = useState('');
     const [couponSuccess, setCouponSuccess] = useState('');
 
@@ -33,29 +38,10 @@ const Cart = () => {
     });
 
     useEffect(() => {
-        // Fetch active coupons
-        fetchCoupons();
-    }, []);
-
-    useEffect(() => {
         if (user && user.addresses && user.addresses.length > 0) {
             setDeliveryAddress(user.addresses[0]);
         }
     }, [user]);
-
-    const fetchCoupons = async () => {
-        try {
-            const config = {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
-                },
-            };
-            const { data } = await axios.get('http://127.0.0.1:5000/api/coupons/active', config);
-            setAvailableCoupons(data);
-        } catch (error) {
-            console.error('Error fetching coupons:', error);
-        }
-    };
 
     const handleApplyCoupon = async () => {
         if (!couponCode.trim()) return;
@@ -63,17 +49,7 @@ const Cart = () => {
         setCouponSuccess('');
 
         try {
-            const config = {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
-                },
-            };
-            const { data } = await axios.post(
-                'http://127.0.0.1:5000/api/coupons/validate',
-                { code: couponCode },
-                config
-            );
-
+            const data = await validateCouponMutation.mutateAsync(couponCode);
             setAppliedCoupon(data);
             setCouponSuccess(`Coupon '${data.code}' applied! You save ${data.discountPercentage}%`);
             setCouponCode('');

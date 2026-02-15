@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Calendar, AlertCircle, RefreshCw, TrendingUp, X, Info, CheckCircle, ClipboardList, Clock } from 'lucide-react';
+import { Calendar, AlertCircle, TrendingUp, X, Info, CheckCircle, ClipboardList, Clock } from 'lucide-react';
 
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
@@ -24,7 +24,6 @@ const MySubscription = () => {
     const [subscription, setSubscription] = useState(null);
     const [loading, setLoading] = useState(true);
     const [availableUpgrades, setAvailableUpgrades] = useState([]);
-    const [processingRenew, setProcessingRenew] = useState(false);
     const [processingUpgrade, setProcessingUpgrade] = useState(false);
     const [isEditAddressModalOpen, setIsEditAddressModalOpen] = useState(false);
     const [editDeliveryAddress, setEditDeliveryAddress] = useState({ street: '', city: '', zip: '', country: 'India' });
@@ -81,48 +80,7 @@ const MySubscription = () => {
         }
     };
 
-    const handleRenew = async () => {
-        if (!subscription) return;
 
-        setProcessingRenew(true);
-        try {
-            const config = {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-            };
-
-            const { data: orderData } = await axios.post(
-                'http://127.0.0.1:5000/api/subscriptions/renew-init',
-                { subscriptionId: subscription._id },
-                config
-            );
-
-            await initPayment({
-                amount: orderData.amount,
-                currency: orderData.currency,
-                orderId: orderData.orderId,
-                user: user,
-                description: `Renew ${subscription.plan.name}`,
-                verifyUrl: 'http://127.0.0.1:5000/api/subscriptions/renew-verify',
-                metadata: {
-                    subscriptionId: orderData.subscriptionId,
-                },
-                showNotification,
-                onSuccess: (data) => {
-                    showNotification('Subscription renewed successfully!', 'success');
-                    fetchSubscriptionData();
-                },
-                onError: (err) => {
-                    showNotification('Renewal failed. Please contact support.', 'error');
-                }
-            });
-
-        } catch (error) {
-            console.error('Error initiating renewal:', error);
-            showNotification('Failed to initiate renewal', 'error');
-        } finally {
-            setProcessingRenew(false);
-        }
-    };
 
     const handleInitiateUpgrade = (plan) => {
         setSelectedUpgradePlan(plan);
@@ -504,14 +462,7 @@ const MySubscription = () => {
                                 </div>
 
                                 <div className="flex flex-wrap gap-3">
-                                    <button
-                                        onClick={handleRenew}
-                                        disabled={processingRenew}
-                                        className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
-                                    >
-                                        <RefreshCw className="h-4 w-4 mr-2" />
-                                        {processingRenew ? 'Processing...' : 'Renew Subscription'}
-                                    </button>
+
                                     <button
                                         onClick={() => navigate('/orders')}
                                         className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
