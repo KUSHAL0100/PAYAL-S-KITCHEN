@@ -96,7 +96,7 @@ const pauseDelivery = async (req, res) => {
 const getMyPauses = async (req, res) => {
     try {
         const pauses = await DeliveryPause.find({ user: req.user._id })
-            .sort({ startDate: -1 })
+            .sort({ startDate: -1, createdAt: -1 })
             .populate('subscription', 'plan mealType'); // Identify which sub it belongs to
 
         res.json(pauses);

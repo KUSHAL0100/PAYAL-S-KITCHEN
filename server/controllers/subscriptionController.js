@@ -5,6 +5,7 @@ const Order = require('../models/Order');
 const razorpayUtil = require('../utils/razorpay');
 const subUtils = require('../utils/subscriptionUtils');
 const crypto = require('crypto');
+const DeliveryPause = require('../models/DeliveryPause');
 
 // @desc    Buy a subscription (Create Razorpay Order)
 // @route   POST /api/subscriptions
@@ -152,6 +153,17 @@ const verifySubscriptionPayment = async (req, res) => {
         user.currentSubscription = createdSubscription._id;
         await user.save();
 
+        // Transfer delivery pauses from old subscription if exists
+        if (activeSub) {
+            await DeliveryPause.updateMany(
+                {
+                    subscription: activeSub._id,
+                    status: 'Active'
+                },
+                { subscription: createdSubscription._id }
+            );
+        }
+
         // Create Order record
         const mealTypeLabel = selectedMealType === 'both' ? 'Lunch + Dinner' : selectedMealType.charAt(0).toUpperCase() + selectedMealType.slice(1);
 
@@ -226,9 +238,14 @@ const cancelSubscription = async (req, res) => {
             {
                 status: 'Cancelled',
                 refundAmount: 0,
-                cancellationFee: 1 // We can't easily know totalAmount for each in updateMany, but orderController handles the logic if they try to cancel again.
-                // Actually, let's just update the status. The specific refund policy is handled in the order cancel route too.
+                cancellationFee: 1
             }
+        );
+
+        // Cancel Active Delivery Pauses
+        await DeliveryPause.updateMany(
+            { subscription: subscription._id, status: 'Active' },
+            { status: 'Cancelled' }
         );
 
         // For the latest order, we want to set the cancellationFee correctly if we had a single reference, 
@@ -315,6 +332,12 @@ const adminCancelSubscription = async (req, res) => {
                 status: 'Cancelled',
                 refundAmount: 0
             }
+        );
+
+        // Cancel Active Delivery Pauses
+        await DeliveryPause.updateMany(
+            { subscription: subscription._id, status: 'Active' },
+            { status: 'Cancelled' }
         );
 
         res.json({ message: 'Subscription cancelled by admin', subscription });
@@ -566,6 +589,15 @@ const verifyUpgrade = async (req, res) => {
         const user = await User.findById(req.user._id);
         user.currentSubscription = newSubscription._id;
         await user.save();
+
+        // Transfer active delivery pauses to the new subscription
+        await DeliveryPause.updateMany(
+            {
+                subscription: currentSubscription._id,
+                status: 'Active'
+            },
+            { subscription: newSubscription._id }
+        );
 
         // Create Order record (Calculate final price paid after pro-rata discount)
         const mealTypeLabel = selectedMealType === 'both' ? 'Lunch + Dinner' : selectedMealType.charAt(0).toUpperCase() + selectedMealType.slice(1);
