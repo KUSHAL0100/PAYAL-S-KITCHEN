@@ -76,9 +76,16 @@ const PauseHistory = ({ refreshTrigger }) => {
                 {pauses.map((pause, idx) => {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
+
                     const startDate = new Date(pause.startDate);
-                    const isCancellable = pause.status === 'Active' && today < startDate;
+                    startDate.setHours(0, 0, 0, 0);
+
+                    const endDate = new Date(pause.endDate);
+                    endDate.setHours(0, 0, 0, 0);
+
                     const isActive = pause.status === 'Active';
+                    const isCompleted = isActive && today > endDate;
+                    const isCancellable = isActive && today < startDate;
 
                     return (
                         <div key={pause._id} className="p-8 hover:bg-gray-50/50 transition-all group">
@@ -86,7 +93,7 @@ const PauseHistory = ({ refreshTrigger }) => {
                                 <div className="flex items-center gap-6">
                                     {/* Number Circle */}
                                     <div className={`hidden sm:flex h-12 w-12 rounded-2xl items-center justify-center font-black text-lg transition-all
-                                        ${isActive ? 'bg-orange-100 text-orange-600 rotate-3' : 'bg-gray-100 text-gray-400'}
+                                        ${isActive && !isCompleted ? 'bg-orange-100 text-orange-600 rotate-3' : 'bg-gray-100 text-gray-400'}
                                     `}>
                                         {pauses.length - idx}
                                     </div>
@@ -105,12 +112,14 @@ const PauseHistory = ({ refreshTrigger }) => {
                                             </div>
 
                                             <span className={`px-4 py-1.5 text-[9px] rounded-full font-black uppercase tracking-widest flex items-center gap-1.5
-                                                ${isActive
-                                                    ? 'bg-green-100 text-green-700 shadow-sm shadow-green-100'
-                                                    : 'bg-rose-50 text-rose-400 opacity-60'
+                                                ${isCompleted
+                                                    ? 'bg-gray-100 text-gray-500 shadow-sm'
+                                                    : isActive
+                                                        ? 'bg-green-100 text-green-700 shadow-sm shadow-green-100'
+                                                        : 'bg-rose-50 text-rose-400 opacity-60'
                                                 }`}>
-                                                {isActive ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                                                {pause.status}
+                                                {isActive && !isCompleted ? <CheckCircle2 className="w-3 h-3" /> : isCompleted ? <CheckCircle2 className="w-3 h-3 text-gray-400" /> : <XCircle className="w-3 h-3" />}
+                                                {isCompleted ? 'Completed' : pause.status}
                                             </span>
                                         </div>
 
@@ -134,7 +143,7 @@ const PauseHistory = ({ refreshTrigger }) => {
                                         <Trash2 className="w-4 h-4" />
                                         Revoke Request
                                     </button>
-                                ) : isActive && (
+                                ) : isActive && !isCompleted && (
                                     <div className="px-6 py-3 bg-orange-50 text-orange-600 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-orange-100">
                                         <AlertCircle className="w-4 h-4" />
                                         Locked - In Progress
