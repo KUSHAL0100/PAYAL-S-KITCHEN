@@ -173,7 +173,7 @@ const EventCatering = () => {
                                 />
 
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Guest Count (20 - 50)
+                                    Number of Guests (20 - 50)
                                 </label>
                                 <input
                                     type="number"
