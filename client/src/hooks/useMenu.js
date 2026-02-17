@@ -23,15 +23,22 @@ export const useTodaysMenu = (planType) => {
  * Fetches a range of menus for the weekly view.
  */
 export const useWeeklyMenu = (planType, currentDate) => {
-    return useQuery({
-        queryKey: ['menu', 'weekly', planType, currentDate.getMonth(), currentDate.getFullYear()],
-        queryFn: async () => {
-            const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-            const endOfRange = new Date(startOfMonth);
-            endOfRange.setDate(endOfRange.getDate() + 14);
+    // Calculate start and end of the week for the currentDate to match "Today's Menu" context
+    const startOfWeek = new Date(currentDate);
+    startOfWeek.setHours(0, 0, 0, 0);
+    const day = startOfWeek.getDay(); // 0 (Sun) to 6 (Sat)
+    const diff = startOfWeek.getDate() - day; // Adjust to Sunday
+    startOfWeek.setDate(diff);
 
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // Saturday
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    return useQuery({
+        queryKey: ['menu', 'weekly', planType, startOfWeek.toISOString()],
+        queryFn: async () => {
             const { data } = await axios.get(
-                `${API_URL}?startDate=${startOfMonth.toISOString()}&endDate=${endOfRange.toISOString()}&planType=${planType}`
+                `${API_URL}?startDate=${startOfWeek.toISOString()}&endDate=${endOfWeek.toISOString()}&planType=${planType}`
             );
 
             // Process to get one of each weekday (0-6)
@@ -45,7 +52,7 @@ export const useWeeklyMenu = (planType, currentDate) => {
 
             return uniqueWeekdays;
         },
-        staleTime: 30 * 60 * 1000, // 30 minutes (menu doesn't change often)
+        staleTime: 30 * 60 * 1000, // 30 minutes
     });
 };
 
