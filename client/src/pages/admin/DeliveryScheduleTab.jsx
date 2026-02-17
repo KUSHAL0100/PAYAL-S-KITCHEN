@@ -339,7 +339,7 @@ const DeliveryScheduleTab = () => {
                                         {/* Lane Items */}
                                         <div className="space-y-3">
                                             {items.length === 0 ? (
-                                                <div className="bg-gray-50/50 border border-dashed border-gray-200 rounded-2xl p-10 text-center">
+                                                <div className="bg-gray-50/50 border border-dashed border-gray-200 rounded-2xl p-10 text-center select-none">
                                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">No entries</p>
                                                 </div>
                                             ) : (
@@ -348,21 +348,31 @@ const DeliveryScheduleTab = () => {
                                                         onClick={() => openDetails(item)}
                                                         className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-lg transition-all relative group overflow-hidden cursor-pointer"
                                                     >
-                                                        <div className="absolute top-4 left-0 w-1 h-8 bg-orange-500 rounded-r-full group-hover:h-12 transition-all"></div>
+                                                        {/* Status Indicator Bar */}
+                                                        <div className={`absolute top-4 left-0 w-1 h-8 rounded-r-full group-hover:h-12 transition-all
+                                                            ${planType === 'Basic' ? 'bg-gray-400' : ''}
+                                                            ${planType === 'Premium' ? 'bg-orange-500' : ''}
+                                                            ${planType === 'Exotic' ? 'bg-purple-500' : ''}
+                                                        `}></div>
 
-                                                        <div className="flex items-start gap-3 mb-3">
-                                                            <div className="p-2.5 bg-gray-50 rounded-xl group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                                                        <div className="flex items-start gap-3 mb-3 pl-2">
+                                                            <div className="p-2.5 bg-gray-50 rounded-xl group-hover:bg-gray-900 group-hover:text-white transition-colors">
                                                                 <User className="h-4 w-4" />
                                                             </div>
-                                                            <div className="pr-10">
-                                                                <h4 className="font-black text-gray-900 text-sm leading-tight uppercase tracking-tight">{item.customerName}</h4>
-                                                                <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 mt-0.5">
+                                                            <div className="pr-2 flex-1 min-w-0">
+                                                                <h4 className="font-black text-gray-900 text-sm leading-tight uppercase tracking-tight truncate">{item.customerName}</h4>
+                                                                <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 mt-0.5 truncate">
                                                                     <Phone className="h-2.5 w-2.5" /> {item.phone || 'N/A'}
                                                                 </p>
                                                             </div>
+                                                            {/* Quantity Badge */}
+                                                            <div className="bg-gray-100 px-2 py-1 rounded-lg">
+                                                                <span className="text-[10px] font-black text-gray-600">x{item.quantity || 1}</span>
+                                                            </div>
                                                         </div>
 
-                                                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-50 group-hover:bg-white transition-all mb-3">
+                                                        {/* Address Section */}
+                                                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-50 group-hover:bg-white transition-all mb-3 text-xs text-gray-600">
                                                             <AddressBlock
                                                                 mealType={item.mealType}
                                                                 lunchAddress={item.lunchAddress || item.address}
@@ -370,41 +380,36 @@ const DeliveryScheduleTab = () => {
                                                             />
                                                         </div>
 
-                                                        <div className="space-y-2">
-                                                            <div className="flex flex-wrap gap-1.5">
-                                                                {(item.items || []).slice(0, 3).map((food, fidx) => (
-                                                                    <span key={fidx} className="bg-white border border-gray-100 text-gray-700 px-2.5 py-1 rounded-lg text-[10px] font-bold group-hover:border-orange-200 transition-all">
-                                                                        {food}
-                                                                    </span>
-                                                                ))}
-                                                                {(item.items || []).length > 3 && (
-                                                                    <span className="text-[9px] font-black text-gray-400 px-1 py-1">+{(item.items || []).length - 3} more</span>
-                                                                )}
-                                                            </div>
+                                                        {/* Items Tags */}
+                                                        <div className="flex flex-wrap gap-1.5 mb-3">
+                                                            {(item.items || []).slice(0, 3).map((food, fidx) => (
+                                                                <span key={fidx} className="bg-white border border-gray-100 text-gray-600 px-2 py-0.5 rounded-md text-[9px] font-bold group-hover:border-gray-300 transition-all">
+                                                                    {food}
+                                                                </span>
+                                                            ))}
+                                                            {(item.items || []).length > 3 && (
+                                                                <span className="text-[9px] font-black text-gray-400 px-1 py-1">+{(item.items || []).length - 3} more</span>
+                                                            )}
                                                         </div>
 
-                                                        <div className="mt-4 pt-3 border-t border-gray-50 flex items-center justify-between">
+                                                        <div className="pt-3 border-t border-gray-50 flex items-center justify-between">
                                                             <div className="flex items-center gap-2">
-                                                                <div className={`px-2.5 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest
-                                                                    ${item.mealType === 'lunch' ? 'bg-amber-100 text-amber-600' : ''}
-                                                                    ${item.mealType === 'dinner' ? 'bg-indigo-100 text-indigo-600' : ''}
-                                                                    ${item.mealType === 'both' ? 'bg-green-100 text-green-600' : ''}
-                                                                    ${item.mealType === 'event' ? 'bg-gray-100 text-gray-600' : ''}
+                                                                <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest
+                                                                    ${item.mealType === 'lunch' ? 'bg-yellow-100 text-yellow-700' : ''}
+                                                                    ${item.mealType === 'dinner' ? 'bg-indigo-100 text-indigo-700' : ''}
+                                                                    ${item.mealType === 'both' ? 'bg-green-100 text-green-700' : ''}
+                                                                    ${item.mealType === 'event' ? 'bg-gray-200 text-gray-700' : 'bg-gray-100 text-gray-600'}
                                                                 `}>
-                                                                    {item.mealType}
+                                                                    {item.mealType || 'Standard'}
                                                                 </div>
                                                                 <span className="text-[9px] font-black text-gray-400 flex items-center gap-1">
                                                                     <Clock className="h-3 w-3" /> {item.deliveryTime}
                                                                 </span>
                                                             </div>
                                                             <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    openDetails(item);
-                                                                }}
-                                                                className="text-[9px] font-black text-blue-600 uppercase hover:underline"
+                                                                className="text-[9px] font-black text-blue-600 uppercase hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
                                                             >
-                                                                Details
+                                                                View
                                                             </button>
                                                         </div>
                                                     </div>

@@ -18,16 +18,47 @@ export const CartProvider = ({ children }) => {
     }, [cartItems]);
 
     const addToCart = (item) => {
+        let result = { success: true };
+
         setCartItems((prevItems) => {
-            const existingItem = prevItems.find((i) => i.id === item.id);
-            if (existingItem) {
-                return prevItems.map((i) =>
-                    i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
-                );
+            // Check if same item already exists (same type, plan, meal time, and date)
+            const existingItemIndex = prevItems.findIndex((i) =>
+                i.type === item.type &&
+                i.planType === item.planType &&
+                i.mealTime === item.mealTime &&
+                i.deliveryDate === item.deliveryDate
+            );
+
+            // Calculate current quantity for this specific slot
+            const currentQuantity = existingItemIndex !== -1 ? prevItems[existingItemIndex].quantity : 0;
+            const newTotalQuantity = currentQuantity + item.quantity;
+
+            // Enforce Maximum Limit of 19
+            if (newTotalQuantity > 19) {
+                result = {
+                    success: false,
+                    message: `Limit Exceeded: You can only order up to 19 tiffins per slot. You already have ${currentQuantity} in your cart.`
+                };
+                return prevItems;
+            }
+
+            if (existingItemIndex !== -1) {
+                // Update existing item
+                const updatedItems = [...prevItems];
+                const existingItem = updatedItems[existingItemIndex];
+
+                updatedItems[existingItemIndex] = {
+                    ...existingItem,
+                    quantity: newTotalQuantity,
+                    totalAmount: existingItem.totalAmount + item.totalAmount
+                };
+                return updatedItems;
             } else {
-                return [...prevItems, item]; // Preserve the item's quantity as passed
+                return [...prevItems, item];
             }
         });
+
+        return result;
     };
 
     const removeFromCart = (id) => {
@@ -35,10 +66,24 @@ export const CartProvider = ({ children }) => {
     };
 
     const updateQuantity = (id, quantity) => {
-        if (quantity < 1) return;
+        if (quantity < 1) return { success: true };
+        if (quantity > 19) {
+            return { success: false, message: 'Maximum 19 persons allowed per order slot.' };
+        }
         setCartItems((prevItems) =>
-            prevItems.map((item) => (item.id === id ? { ...item, quantity } : item))
+            prevItems.map((item) => {
+                if (item.id === id) {
+                    const price = item.price || 0;
+                    return {
+                        ...item,
+                        quantity,
+                        totalAmount: price * quantity
+                    };
+                }
+                return item;
+            })
         );
+        return { success: true };
     };
 
     const clearCart = () => {

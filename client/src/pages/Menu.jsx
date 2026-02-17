@@ -1,5 +1,5 @@
 import React, { useState, useContext, useMemo } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Star, ShoppingCart } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Star, ShoppingCart, Plus, Minus } from 'lucide-react';
 import CartContext from '../context/CartContext';
 import NotificationContext from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
@@ -101,7 +101,13 @@ const Menu = () => {
             deliveryDate: orderDate // Pass selected date
         };
 
-        addToCart(orderItem);
+        const result = addToCart(orderItem);
+
+        if (result && !result.success) {
+            showNotification(result.message, 'error');
+            return;
+        }
+
         setIsModalOpen(false);
         showNotification('Tiffin added to cart!', 'success');
         navigate('/cart');
@@ -318,18 +324,23 @@ const Menu = () => {
                         return null;
                     })()}
 
-                    {/* Quantity Selection */}
-                    <div>
-                        <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">Quantity (Persons)</label>
-                        <select
-                            value={orderQuantity}
-                            onChange={(e) => setOrderQuantity(parseInt(e.target.value))}
-                            className="mt-1 block w-full pl-4 pr-10 py-3 text-sm border-gray-200 focus:outline-none focus:ring-orange-500 focus:border-orange-500 rounded-2xl bg-gray-50/50 font-bold"
-                        >
-                            {[1, 2, 3, 4, 5].map(num => (
-                                <option key={num} value={num}>{num} Person{num > 1 ? 's' : ''}</option>
+                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                        <label className="block text-xs font-black text-gray-500 mb-3 uppercase tracking-widest">Number of Persons</label>
+                        <div className="grid grid-cols-5 gap-2">
+                            {Array.from({ length: 19 }, (_, i) => i + 1).map(num => (
+                                <button
+                                    key={num}
+                                    type="button"
+                                    onClick={() => setOrderQuantity(num)}
+                                    className={`py-2 rounded-lg text-sm font-black transition-all duration-200 ${orderQuantity === num
+                                        ? 'bg-orange-600 text-white shadow-md transform scale-105'
+                                        : 'bg-white text-gray-700 border border-gray-200 hover:border-orange-300 hover:bg-orange-50'
+                                        }`}
+                                >
+                                    {num}
+                                </button>
                             ))}
-                        </select>
+                        </div>
                     </div>
 
                     {/* Price Summary */}

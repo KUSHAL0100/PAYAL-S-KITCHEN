@@ -146,7 +146,7 @@ const getDeliverySchedule = async (req, res) => {
 
         });
 
-        // --- Process Orders ---
+        // --- Process Orders (Each item = separate schedule entry) ---
         orders.forEach(order => {
             const daysItems = order.items.filter(item => {
                 const d = new Date(item.deliveryDate);
@@ -155,43 +155,28 @@ const getDeliverySchedule = async (req, res) => {
 
             if (daysItems.length === 0) return;
 
-            let combinedItems = [];
-            let totalPersons = 0;
-            let finalPlan = 'Basic';
-            let deliveryTime = '';
-            const planPriority = { 'Events': 4, 'Exotic': 3, 'Premium': 2, 'Basic': 1 };
-
             daysItems.forEach(item => {
-                // Determine Plan
-                let pType = order.type === 'event' ? 'Events' : (item.selectedItems?.planType || 'Basic');
-                if (pType === 'Basic') {
+                // Determine which plan lane this item belongs to
+                let planType = order.type === 'event' ? 'Events' : (item.selectedItems?.planType || 'Basic');
+                if (planType === 'Basic') {
                     const n = (item.name || '').toLowerCase();
-                    if (n.includes('exotic')) pType = 'Exotic';
-                    else if (n.includes('premium')) pType = 'Premium';
+                    if (n.includes('exotic')) planType = 'Exotic';
+                    else if (n.includes('premium')) planType = 'Premium';
                 }
-                if (planPriority[pType] > planPriority[finalPlan]) finalPlan = pType;
 
-                // Extract Breakdown but only count quantity as persons
-                const names = extractItemNames(item);
-                combinedItems.push(...names);
-                totalPersons += (item.quantity || 1);
-                
-                // Set delivery time from item (use the first one found or concatenate if different)
-                if (item.deliveryTime && !deliveryTime.includes(item.deliveryTime)) {
-                    deliveryTime = deliveryTime ? `${deliveryTime}, ${item.deliveryTime}` : item.deliveryTime;
-                }
-            });
+                const itemNames = extractItemNames(item);
 
-            schedule[finalPlan].push({
-                _id: order._id,
-                type: order.type === 'event' ? 'Event Order' : 'Single Order',
-                customerName: order.user?.name || 'Guest',
-                phone: order.user?.phone,
-                address: order.deliveryAddress,
-                items: combinedItems,
-                quantity: totalPersons,
-                mealType: order.type === 'event' ? 'event' : 'single',
-                deliveryTime: deliveryTime || '12:00 PM'
+                schedule[planType].push({
+                    _id: order._id,
+                    type: order.type === 'event' ? 'Event Order' : 'Single Order',
+                    customerName: order.user?.name || 'Guest',
+                    phone: order.user?.phone,
+                    address: order.deliveryAddress,
+                    items: itemNames,
+                    quantity: item.quantity || 1,
+                    mealType: order.type === 'event' ? 'event' : 'single',
+                    deliveryTime: item.deliveryTime || '12:00 PM'
+                });
             });
         });
 

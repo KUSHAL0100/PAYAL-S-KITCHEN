@@ -402,64 +402,7 @@ const MySubscription = () => {
 
                         {subscription.status === 'Active' ? (
                             <div className="space-y-6">
-                                {/* Manage Meal Options */}
-                                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                    <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center">
-                                        Manage Meal Option (Partial Cancellation)
-                                    </h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {['both', 'lunch', 'dinner'].map((type) => (
-                                            <button
-                                                key={type}
-                                                disabled={subscription.mealType === type}
-                                                onClick={async () => {
-                                                    if (type === 'both' && subscription.mealType !== 'both') {
-                                                        showNotification('Upgrading to both meals requires additional payment. Please use the upgrade section below.', 'info');
-                                                        return;
-                                                    }
-
-                                                    const isDowngrade = subscription.mealType === 'both' && type !== 'both';
-                                                    let confirmMessage = '';
-
-                                                    if (isDowngrade) {
-                                                        if (type === 'lunch') {
-                                                            confirmMessage = `Are you sure you want to switch to LUNCH only? No refund will be given for the removed meal portion. Your current delivery address will be preserved for lunch deliveries.`;
-                                                        } else {
-                                                            confirmMessage = `Are you sure you want to switch to DINNER only? No refund will be given for the removed meal portion. Your current delivery address will be preserved for dinner deliveries.`;
-                                                        }
-                                                    } else {
-                                                        confirmMessage = `Are you sure you want to switch your subscription meal timing to ${type.toUpperCase()}? Your delivery address will be preserved.`;
-                                                    }
-
-                                                    if (!window.confirm(confirmMessage)) return;
-
-                                                    try {
-                                                        const config = {
-                                                            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-                                                        };
-                                                        await axios.put('http://127.0.0.1:5000/api/subscriptions/change-meal-type', { mealType: type }, config);
-                                                        showNotification(`Switched to ${type.toUpperCase()} meals.`, 'success');
-                                                        fetchSubscriptionData();
-                                                    } catch (err) {
-                                                        showNotification('Failed to update meal type', 'error');
-                                                    }
-                                                }}
-                                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${subscription.mealType === type
-                                                    ? 'bg-orange-600 text-white cursor-default'
-                                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                                                    }`}
-                                            >
-                                                {type === 'both' ? 'Both Meals' : type.charAt(0).toUpperCase() + type.slice(1) + ' Only'}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <p className="mt-2 text-xs text-gray-500 italic">
-                                        * You can switch to a single meal option at any time, but no refund is provided for the removed meal portion.
-                                    </p>
-                                    <p className="mt-1 text-xs text-blue-600 font-medium">
-                                        📍 Your delivery address will be automatically preserved when switching meal types.
-                                    </p>
-                                </div>
+                                {/* Meal Options Management Disabled */}
 
                                 <div className="flex flex-wrap gap-3">
 

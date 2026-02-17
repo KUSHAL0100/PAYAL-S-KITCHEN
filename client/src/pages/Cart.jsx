@@ -76,11 +76,34 @@ const Cart = () => {
         const hasTiffin = cartItems.some(item => item.type === 'single_tiffin');
         const hasEvent = cartItems.some(item => item.type === 'event');
 
-        // Tiffin Delivery Logic: ₹100 if subtotal <= 1000
-        const tiffinSubtotal = cartItems
-            .filter(item => item.type === 'single_tiffin')
-            .reduce((sum, item) => sum + (item.totalAmount || 0), 0);
-        const tiffinFee = hasTiffin && tiffinSubtotal <= 1000 ? 100 : 0;
+        // Tiffin Delivery Logic: 
+        // 1. Group items by delivery slot (Date + Meal Time)
+        // 2. Calculate subtotal for each slot
+        // 3. If slot subtotal > ₹700 -> FREE Delivery
+        // 4. Else -> ₹40 Delivery Fee per slot
+        const deliverySlots = {}; // Key: "YYYY-MM-DD_MealTime", Value: subtotal amount
+
+        cartItems.forEach(item => {
+            if (item.type === 'single_tiffin' && item.deliveryDate && item.mealTime) {
+                const dateKey = new Date(item.deliveryDate).toISOString().split('T')[0];
+                const slotKey = `${dateKey}_${item.mealTime}`;
+
+                if (!deliverySlots[slotKey]) {
+                    deliverySlots[slotKey] = 0;
+                }
+                deliverySlots[slotKey] += (item.totalAmount || 0);
+            }
+        });
+
+        const DELIVERY_FEE_PER_SLOT = 40;
+        const FREE_DELIVERY_THRESHOLD = 700;
+
+        let tiffinFee = 0;
+        Object.values(deliverySlots).forEach(slotSubtotal => {
+            if (slotSubtotal <= FREE_DELIVERY_THRESHOLD) {
+                tiffinFee += DELIVERY_FEE_PER_SLOT;
+            }
+        });
 
         // Event Delivery Logic: ₹200 if guests <= 30
         const totalGuests = cartItems
@@ -284,7 +307,12 @@ const Cart = () => {
                                                     </button>
                                                     <span className="px-4 py-2 text-gray-900">{item.quantity}</span>
                                                     <button
-                                                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                                        onClick={() => {
+                                                            const result = updateQuantity(item.id, item.quantity + 1);
+                                                            if (result && !result.success) {
+                                                                showNotification(result.message, 'error');
+                                                            }
+                                                        }}
                                                         className="p-2 hover:bg-gray-100"
                                                     >
                                                         <Plus className="h-4 w-4" />
