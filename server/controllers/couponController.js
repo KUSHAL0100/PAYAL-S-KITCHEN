@@ -7,10 +7,19 @@ const createCoupon = async (req, res) => {
     const { code, discountPercentage, expiryDate } = req.body;
 
     try {
+        // Validation: Check if coupon code already exists
         const couponExists = await Coupon.findOne({ code });
-
         if (couponExists) {
-            return res.status(400).json({ message: 'Coupon already exists' });
+            return res.status(400).json({ message: 'Coupon already exists. Please update the existing one or use a different code.' });
+        }
+
+        // Validation: Expiry Date must be in the future
+        const expiry = new Date(expiryDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset time to start of today
+
+        if (expiry < today) {
+            return res.status(400).json({ message: 'Expiry date cannot be in the past.' });
         }
 
         const coupon = await Coupon.create({

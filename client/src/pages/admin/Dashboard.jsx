@@ -1073,6 +1073,7 @@ const AdminDashboard = () => {
                                         <input
                                             type="date"
                                             required
+                                            min={new Date().toISOString().split('T')[0]} // Block past dates
                                             value={couponFormData.expiryDate}
                                             onChange={(e) => setCouponFormData({ ...couponFormData, expiryDate: e.target.value })}
                                             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
