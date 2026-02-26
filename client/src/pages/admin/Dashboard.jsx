@@ -4,6 +4,7 @@ import { Plus, Trash2, Edit2, Check, X, Package, Calendar, Clock, MessageSquare,
 import AuthContext from '../../context/AuthContext';
 import NotificationContext from '../../context/NotificationContext';
 import DeliveryScheduleTab from './DeliveryScheduleTab';
+import ReportsTab from './ReportsTab';
 import AddressBlock from '../../components/AddressBlock';
 
 
@@ -461,6 +462,7 @@ const AdminDashboard = () => {
                             { id: 'refunds', icon: RefreshCw, label: 'Refunds' },
 
                             { id: 'menus', icon: Utensils, label: 'Menus' },
+                            { id: 'reports', icon: TrendingUp, label: 'Reports' },
                         ].map((tab) => (
                             <button
                                 key={tab.id}
@@ -717,6 +719,9 @@ const AdminDashboard = () => {
 
                 {/* --- Schedule Tab --- */}
                 {activeTab === 'schedule' && <DeliveryScheduleTab />}
+
+                {/* --- Reports Tab --- */}
+                {activeTab === 'reports' && <ReportsTab />}
 
                 {/* --- Orders Tab --- */}
 
