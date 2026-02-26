@@ -1,11 +1,13 @@
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { useQueryClient } from '@tanstack/react-query';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
 
     useEffect(() => {
         const checkUserLoggedIn = async () => {
@@ -47,6 +49,7 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         localStorage.removeItem('token');
         setUser(null);
+        queryClient.clear(); // Clear all cached queries to prevent stale data across user sessions
     };
 
     return (

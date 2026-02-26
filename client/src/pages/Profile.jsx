@@ -10,7 +10,7 @@ const Profile = () => {
     const { user, setUser } = useContext(AuthContext);
     const { showNotification } = useContext(NotificationContext);
     const [loading, setLoading] = useState(false);
-    const { data: stats, isLoading: statsLoading } = useOrderStats();
+    const { data: stats, isLoading: statsLoading } = useOrderStats(user?._id);
 
     const [formData, setFormData] = useState({
         name: '',

@@ -34,11 +34,12 @@ const cancelOrder = async (orderId) => {
 /**
  * Custom hook to fetch user order statistics.
  */
-export const useOrderStats = () => {
+export const useOrderStats = (userId) => {
     return useQuery({
-        queryKey: ['orderStats'],
+        queryKey: ['orderStats', userId],
         queryFn: fetchOrderStats,
         staleTime: 5 * 60 * 1000, // 5 minutes
+        enabled: !!userId, // Only fetch when a user is logged in
     });
 };
 
