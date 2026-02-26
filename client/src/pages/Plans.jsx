@@ -87,6 +87,7 @@ const Plans = () => {
 
     const handleInitiateSubscribe = (plan) => {
         if (!user) {
+            showNotification('Please login to subscribe to a plan', 'warning');
             navigate('/login');
             return;
         }

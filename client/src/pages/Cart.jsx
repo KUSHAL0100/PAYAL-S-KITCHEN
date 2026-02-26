@@ -132,11 +132,6 @@ const Cart = () => {
 
 
     const handleCheckout = async () => {
-        if (!user) {
-            navigate('/login');
-            return;
-        }
-
         if (!deliveryAddress.street || !deliveryAddress.city || !deliveryAddress.zip) {
             setError('Please provide a complete delivery address.');
             return;

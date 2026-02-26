@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
@@ -11,6 +12,7 @@ const Complaints = () => {
     const [loading, setLoading] = useState(true);
     const { user } = useContext(AuthContext);
     const { showNotification } = useContext(NotificationContext);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchComplaints = async () => {
@@ -32,11 +34,20 @@ const Complaints = () => {
 
         if (user) {
             fetchComplaints();
+        } else {
+            setLoading(false);
         }
     }, [user]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!user) {
+            showNotification('Please login to submit a support request', 'warning');
+            navigate('/login');
+            return;
+        }
+
         try {
             const config = {
                 headers: {
@@ -103,7 +114,15 @@ const Complaints = () => {
                                 Support History
                             </h3>
 
-                            {complaints.length === 0 ? (
+                            {!user ? (
+                                <div className="p-12 text-center bg-gray-50/50 rounded-[2.5rem] border border-dashed border-gray-200">
+                                    <Clock className="h-10 w-10 text-gray-300 mx-auto mb-4" />
+                                    <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Login to view your history</p>
+                                    <button onClick={() => navigate('/login')} className="text-xs font-black text-orange-600 uppercase tracking-widest hover:underline">
+                                        Sign In Now
+                                    </button>
+                                </div>
+                            ) : complaints.length === 0 ? (
                                 <div className="p-12 text-center bg-gray-50/50 rounded-[2.5rem] border border-dashed border-gray-200">
                                     <MessageSquare className="h-10 w-10 text-gray-300 mx-auto mb-4" />
                                     <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">No support tickets found</p>

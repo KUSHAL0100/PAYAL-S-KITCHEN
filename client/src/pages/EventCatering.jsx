@@ -51,6 +51,12 @@ const EventCatering = () => {
     const [eventTime, setEventTime] = useState('12:00');
 
     const handleAddToCart = () => {
+        if (!user) {
+            showNotification('Please login to add items to your cart', 'warning');
+            navigate('/login');
+            return;
+        }
+
         if (!eventDate) {
             showNotification('Please select an event date.', 'error');
             return;

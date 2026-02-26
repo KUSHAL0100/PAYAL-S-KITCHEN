@@ -45,14 +45,16 @@ const Navbar = () => {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <Link to="/cart" className="relative h-10 w-10 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors bg-gray-50 rounded-xl group">
-                            <ShoppingCart className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                            {cartCount > 0 && (
-                                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center bg-orange-600 text-[10px] font-black text-white rounded-lg shadow-lg shadow-orange-200">
-                                    {cartCount}
-                                </span>
-                            )}
-                        </Link>
+                        {user && (
+                            <Link to="/cart" className="relative h-10 w-10 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors bg-gray-50 rounded-xl group">
+                                <ShoppingCart className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                {cartCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center bg-orange-600 text-[10px] font-black text-white rounded-lg shadow-lg shadow-orange-200">
+                                        {cartCount}
+                                    </span>
+                                )}
+                            </Link>
+                        )}
 
                         {user ? (
                             <div className="flex items-center gap-2 pl-4 border-l border-gray-100">

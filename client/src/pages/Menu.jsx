@@ -1,6 +1,7 @@
 import React, { useState, useContext, useMemo } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, Star, ShoppingCart, Plus, Minus } from 'lucide-react';
 import CartContext from '../context/CartContext';
+import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { validateOrderTime } from '../utils/orderUtils';
@@ -18,6 +19,7 @@ const Menu = () => {
     const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
 
     const { addToCart } = useContext(CartContext);
+    const { user } = useContext(AuthContext);
     const { showNotification } = useContext(NotificationContext);
     const navigate = useNavigate();
 
@@ -72,6 +74,12 @@ const Menu = () => {
     };
 
     const handleAddToCart = () => {
+        if (!user) {
+            showNotification('Please login to add items to your cart', 'warning');
+            navigate('/login');
+            return;
+        }
+
         // Validate order time using utility function
         const validation = validateOrderTime(orderDate, orderMealTime);
 
