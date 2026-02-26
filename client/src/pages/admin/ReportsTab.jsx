@@ -40,6 +40,87 @@ const itemVariants = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 }
 
 // ─── Sub-Report Components ───
 
+const SegmentationCard = React.memo(({ distribution }) => {
+    const TYPE_COLORS = {
+        'SINGLE': '#F59E0B',
+        'EVENT': '#8B5CF6',
+        'SUBSCRIPTION PURCHASE': '#3B82F6',
+        'SUBSCRIPTION UPGRADE': '#10B981',
+    };
+    const COLORS = ['#F59E0B', '#3B82F6', '#8B5CF6', '#10B981', '#F43F5E'];
+
+    const total = distribution.reduce((acc, curr) => acc + curr.value, 0);
+
+    return (
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.03)] flex flex-col relative overflow-hidden">
+            <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-indigo-50/50 rounded-full blur-3xl -z-10"></div>
+            <h3 className="text-xl font-black text-gray-900 mb-8 flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-indigo-100 to-indigo-50 border border-indigo-100 rounded-xl shadow-sm"><Package className="h-5 w-5 text-indigo-600" /></div>
+                Order Segmentation
+            </h3>
+            <div className="flex-grow flex flex-col justify-center">
+                <div className="h-56 w-full -mt-4 relative">
+                    {/* Centered Total Indicator */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center z-0 pt-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Total</p>
+                        <p className="text-2xl font-black text-gray-900 leading-tight">{total}</p>
+                    </div>
+
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie
+                                data={distribution}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={70}
+                                outerRadius={90}
+                                paddingAngle={8}
+                                dataKey="value"
+                                stroke="none"
+                                cornerRadius={12}
+                                isAnimationActive={false}
+                            >
+                                {distribution.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={TYPE_COLORS[entry.name] || COLORS[index % COLORS.length]} />
+                                ))}
+                            </Pie>
+                            <Tooltip
+                                contentStyle={{
+                                    borderRadius: '16px',
+                                    border: 'none',
+                                    boxShadow: '0 10px 30px rgb(0 0 0 / 0.1)',
+                                    fontSize: '10px',
+                                    fontWeight: '900',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.05em',
+                                    padding: '8px 12px'
+                                }}
+                                itemStyle={{ padding: '2px 0' }}
+                            />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
+
+                <div className="mt-8 grid grid-cols-1 gap-3">
+                    {distribution.slice(0, 4).map((item, index) => (
+                        <div key={index} className="flex items-center justify-between p-4 bg-gray-50/80 hover:bg-white hover:shadow-md border border-gray-100 rounded-2xl transition-all group overflow-hidden relative">
+                            <div className="absolute inset-y-0 left-0 w-1 group-hover:w-2 transition-all" style={{ background: TYPE_COLORS[item.name] || COLORS[index % COLORS.length] }}></div>
+                            <div className="flex items-center gap-3 pl-2">
+                                <div className="h-2 w-2 rounded-full shadow-sm" style={{ background: TYPE_COLORS[item.name] || COLORS[index % COLORS.length] }}></div>
+                                <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">{item.name}</span>
+                            </div>
+                            <div className="flex flex-col items-end">
+                                <span className="text-sm font-black text-gray-900">{item.value}</span>
+                                <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">{Math.round((item.value / total) * 100)}% of total</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </motion.div>
+    );
+});
+
 const DayWiseSalesReport = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -449,7 +530,12 @@ const ReportsTab = () => {
         return res.data.data;
     };
 
-    const { data, isLoading, isError, error } = useQuery({ queryKey: ['adminReports'], queryFn: fetchReports, retry: 1 });
+    const { data, isLoading, isError, error } = useQuery({
+        queryKey: ['adminReports'],
+        queryFn: fetchReports,
+        retry: 1,
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    });
     const COLORS = ['#F59E0B', '#3B82F6', '#8B5CF6', '#10B981', '#F43F5E'];
 
     if (isLoading) {
@@ -528,7 +614,19 @@ const ReportsTab = () => {
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11, fontWeight: '800' }} dy={10} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11, fontWeight: '800' }} tickFormatter={(val) => `₹${val / 1000}k`} />
-                                <Tooltip cursor={{ fill: '#F8FAFC' }} contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)', padding: '16px 20px', fontWeight: '900', color: '#1e293b' }} itemStyle={{ color: '#f59e0b' }} />
+                                <Tooltip
+                                    cursor={{ fill: '#F8FAFC' }}
+                                    contentStyle={{
+                                        borderRadius: '16px',
+                                        border: 'none',
+                                        boxShadow: '0 10px 30px rgb(0 0 0 / 0.1)',
+                                        padding: '10px 14px',
+                                        fontSize: '11px',
+                                        fontWeight: '900',
+                                        color: '#1e293b'
+                                    }}
+                                    itemStyle={{ color: '#f59e0b', padding: '0' }}
+                                />
                                 <Bar dataKey="revenue" fill="#f59e0b" radius={[6, 6, 6, 6]} barSize={40} animationDuration={1500}>
                                     {revenueTrends.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={index === revenueTrends.length - 1 ? '#ea580c' : '#fcd34d'} />
@@ -539,36 +637,7 @@ const ReportsTab = () => {
                     </div>
                 </motion.div>
 
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.03)] flex flex-col relative overflow-hidden">
-                    <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-indigo-50/50 rounded-full blur-3xl -z-10"></div>
-                    <h3 className="text-xl font-black text-gray-900 mb-8 flex items-center gap-3">
-                        <div className="p-2 bg-gradient-to-br from-indigo-100 to-indigo-50 border border-indigo-100 rounded-xl shadow-sm"><Package className="h-5 w-5 text-indigo-600" /></div>
-                        Order Segmentation
-                    </h3>
-                    <div className="flex-grow flex flex-col justify-center">
-                        <div className="h-56 w-full -mt-4">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie data={distribution} cx="50%" cy="50%" innerRadius={75} outerRadius={95} paddingAngle={8} dataKey="value" stroke="none" cornerRadius={10}>
-                                        {distribution.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                                    </Pie>
-                                    <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 30px rgb(0 0 0 / 0.1)' }} />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                        <div className="mt-8 grid grid-cols-1 gap-3">
-                            {distribution.slice(0, 3).map((item, index) => (
-                                <div key={index} className="flex items-center justify-between p-4 bg-gray-50/80 hover:bg-gray-50 border border-gray-100 rounded-2xl transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-3 w-3 rounded-full shadow-sm" style={{ background: COLORS[index % COLORS.length] }}></div>
-                                        <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">{item.name}</span>
-                                    </div>
-                                    <span className="text-xs font-black text-gray-900">{item.value}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </motion.div>
+                <SegmentationCard distribution={distribution} />
             </div>
 
             {/* Dynamic Reports Tables container */}
