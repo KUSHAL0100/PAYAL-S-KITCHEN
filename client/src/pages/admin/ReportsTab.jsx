@@ -8,7 +8,7 @@ import {
 import {
     TrendingUp, Users, Package, CreditCard, Activity,
     ArrowUpRight, ArrowDownRight, Printer, Download, CalendarDays,
-    FileText, ClipboardList, UserCheck
+    FileText, ClipboardList, UserCheck, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -125,6 +125,7 @@ const DayWiseSalesReport = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [shouldFetch, setShouldFetch] = useState(false);
+    const [validationError, setValidationError] = useState('');
 
     const { data, isLoading, isError } = useQuery({
         queryKey: ['dayWiseSales', startDate, endDate],
@@ -137,9 +138,29 @@ const DayWiseSalesReport = () => {
     });
 
     const handleGenerate = () => {
-        if (!startDate || !endDate) return alert('Please select both dates');
+        setValidationError('');
+        if (!startDate || !endDate) {
+            setValidationError('Please select both From Date and To Date.');
+            return;
+        }
+
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+
+        if (start > today || end > today) {
+            setValidationError('Dates cannot be in the future.');
+            return;
+        }
+        if (start > end) {
+            setValidationError('Invalid Range: From Date cannot be later than To Date.');
+            return;
+        }
         setShouldFetch(true);
     };
+
+    const maxDate = new Date().toISOString().split('T')[0];
 
     const { totals, maxRevenue } = useMemo(() => {
         if (!data || data.length === 0) return { totals: null, maxRevenue: 0 };
@@ -170,12 +191,12 @@ const DayWiseSalesReport = () => {
             <div className="flex flex-wrap items-end gap-5 p-6 bg-gradient-to-br from-white to-gray-50/50 rounded-3xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-xl">
                 <div className="flex-1 min-w-[180px]">
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 pl-1">From Date</label>
-                    <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setShouldFetch(false); }}
+                    <input type="date" value={startDate} max={maxDate} onChange={e => { setStartDate(e.target.value); setShouldFetch(false); setValidationError(''); }}
                         className="w-full px-5 py-3.5 rounded-2xl border border-gray-200 text-sm font-bold text-gray-800 bg-white shadow-sm focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all" />
                 </div>
                 <div className="flex-1 min-w-[180px]">
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 pl-1">To Date</label>
-                    <input type="date" value={endDate} onChange={e => { setEndDate(e.target.value); setShouldFetch(false); }}
+                    <input type="date" value={endDate} max={maxDate} onChange={e => { setEndDate(e.target.value); setShouldFetch(false); setValidationError(''); }}
                         className="w-full px-5 py-3.5 rounded-2xl border border-gray-200 text-sm font-bold text-gray-800 bg-white shadow-sm focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all" />
                 </div>
                 <button onClick={handleGenerate}
@@ -183,6 +204,13 @@ const DayWiseSalesReport = () => {
                     Generate Report
                 </button>
             </div>
+
+            {validationError && (
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-rose-50 text-rose-600 rounded-2xl border border-rose-100 font-bold text-sm shadow-sm flex items-center gap-3">
+                    <span className="bg-rose-100 p-1.5 rounded-full"><AlertTriangle className="h-4 w-4 text-rose-600" /></span>
+                    {validationError}
+                </motion.div>
+            )}
 
             {isLoading && <div className="text-center py-16"><Activity className="animate-spin text-orange-500 h-10 w-10 mx-auto" /><p className="text-gray-400 mt-4 font-bold text-xs tracking-widest uppercase">Analyzing Data...</p></div>}
             {isError && <div className="text-center py-12 text-red-500 font-bold bg-red-50 rounded-3xl border border-red-100">Failed to load report. Please try again.</div>}
@@ -262,6 +290,7 @@ const OrderBillsReport = () => {
     const [endDate, setEndDate] = useState('');
     const [type, setType] = useState('all');
     const [shouldFetch, setShouldFetch] = useState(false);
+    const [validationError, setValidationError] = useState('');
 
     const { data, isLoading, isError } = useQuery({
         queryKey: ['orderBills', startDate, endDate, type],
@@ -274,9 +303,29 @@ const OrderBillsReport = () => {
     });
 
     const handleGenerate = () => {
-        if (!startDate || !endDate) return alert('Please select both dates');
+        setValidationError('');
+        if (!startDate || !endDate) {
+            setValidationError('Please select both From Date and To Date.');
+            return;
+        }
+
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+
+        if (start > today || end > today) {
+            setValidationError('Dates cannot be in the future.');
+            return;
+        }
+        if (start > end) {
+            setValidationError('Invalid Range: From Date cannot be later than To Date.');
+            return;
+        }
         setShouldFetch(true);
     };
+
+    const maxDate = new Date().toISOString().split('T')[0];
 
     const handleDownload = () => {
         if (!data || data.length === 0) return alert('No data to download');
@@ -296,17 +345,17 @@ const OrderBillsReport = () => {
             <div className="flex flex-wrap items-end gap-5 p-6 bg-gradient-to-br from-white to-gray-50/50 rounded-3xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-xl">
                 <div className="flex-1 min-w-[150px]">
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 pl-1">From Date</label>
-                    <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setShouldFetch(false); }}
+                    <input type="date" value={startDate} max={maxDate} onChange={e => { setStartDate(e.target.value); setShouldFetch(false); setValidationError(''); }}
                         className="w-full px-5 py-3.5 rounded-2xl border border-gray-200 text-sm font-bold text-gray-800 bg-white shadow-sm focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all" />
                 </div>
                 <div className="flex-1 min-w-[150px]">
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 pl-1">To Date</label>
-                    <input type="date" value={endDate} onChange={e => { setEndDate(e.target.value); setShouldFetch(false); }}
+                    <input type="date" value={endDate} max={maxDate} onChange={e => { setEndDate(e.target.value); setShouldFetch(false); setValidationError(''); }}
                         className="w-full px-5 py-3.5 rounded-2xl border border-gray-200 text-sm font-bold text-gray-800 bg-white shadow-sm focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all" />
                 </div>
                 <div className="flex-1 min-w-[160px]">
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 pl-1">Order Type</label>
-                    <select value={type} onChange={e => { setType(e.target.value); setShouldFetch(false); }}
+                    <select value={type} onChange={e => { setType(e.target.value); setShouldFetch(false); setValidationError(''); }}
                         className="w-full px-5 py-3.5 rounded-2xl border border-gray-200 text-sm font-bold text-gray-800 bg-white shadow-sm focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none transition-all appearance-none cursor-pointer">
                         {typeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
@@ -316,6 +365,13 @@ const OrderBillsReport = () => {
                     Generate Report
                 </button>
             </div>
+
+            {validationError && (
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-rose-50 text-rose-600 rounded-2xl border border-rose-100 font-bold text-sm shadow-sm flex items-center gap-3">
+                    <span className="bg-rose-100 p-1.5 rounded-full"><AlertTriangle className="h-4 w-4 text-rose-600" /></span>
+                    {validationError}
+                </motion.div>
+            )}
 
             {isLoading && <div className="text-center py-16"><Activity className="animate-spin text-orange-500 h-10 w-10 mx-auto" /><p className="text-gray-400 mt-4 font-bold text-xs tracking-widest uppercase">Fetching Orders...</p></div>}
             {isError && <div className="text-center py-12 text-red-500 font-bold bg-red-50 rounded-3xl border border-red-100">Failed to load report. Please try again.</div>}
