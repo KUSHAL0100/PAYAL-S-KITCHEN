@@ -186,6 +186,7 @@ const Plans = () => {
                 await api.post('/api/subscriptions/verify', verifyPayload, config);
 
                 queryClient.invalidateQueries({ queryKey: ['orderStats'] });
+                queryClient.invalidateQueries({ queryKey: ['myOrders'] });
                 showNotification('Subscription upgraded successfully! (Free upgrade)', 'success');
                 navigate('/my-subscription');
                 return;
@@ -210,6 +211,7 @@ const Plans = () => {
                 showNotification,
                 onSuccess: (data) => {
                     queryClient.invalidateQueries({ queryKey: ['orderStats'] });
+                    queryClient.invalidateQueries({ queryKey: ['myOrders'] });
                     showNotification('Subscription successful! Redirecting...', 'success');
                     navigate('/my-subscription');
                 },

@@ -52,7 +52,7 @@ const MySubscription = () => {
         fetchSubscriptionData();
     }, [user]);
 
-    const fetchSubscriptionData = async () => {
+    const fetchSubscriptionData = async (hideNotFoundToast = false) => {
         setLoading(true);
         try {
             const config = {
@@ -70,7 +70,9 @@ const MySubscription = () => {
         } catch (error) {
             if (error.response?.status === 404) {
                 setSubscription(null);
-                showNotification('You do not have an active subscription', 'info');
+                if (!hideNotFoundToast) {
+                    showNotification('You do not have an active subscription', 'info');
+                }
             } else {
                 console.error('Error fetching subscription:', error);
                 showNotification('Failed to load subscription data', 'error');
@@ -149,6 +151,7 @@ const MySubscription = () => {
                 showNotification,
                 onSuccess: (data) => {
                     queryClient.invalidateQueries({ queryKey: ['orderStats'] });
+                    queryClient.invalidateQueries({ queryKey: ['myOrders'] });
                     showNotification('Subscription upgraded successfully!', 'success');
                     fetchSubscriptionData();
                     setSelectedUpgradePlan(null);
@@ -185,8 +188,9 @@ const MySubscription = () => {
             );
 
             queryClient.invalidateQueries({ queryKey: ['orderStats'] });
+            queryClient.invalidateQueries({ queryKey: ['myOrders'] });
             showNotification('Subscription cancelled successfully', 'success');
-            fetchSubscriptionData();
+            fetchSubscriptionData(true);
         } catch (error) {
             console.error('Error cancelling subscription:', error);
             showNotification('Failed to cancel subscription', 'error');
