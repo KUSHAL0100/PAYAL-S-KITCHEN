@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../../lib/api';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, BarChart, Bar
@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const API_BASE = 'http://127.0.0.1:5000/api/admin/reports';
+const API_BASE = '/api/admin/reports';
 
 const getAuthConfig = () => ({
     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -129,7 +129,7 @@ const DayWiseSalesReport = () => {
     const { data, isLoading, isError } = useQuery({
         queryKey: ['dayWiseSales', startDate, endDate],
         queryFn: async () => {
-            const res = await axios.get(`${API_BASE}/day-wise`, { ...getAuthConfig(), params: { startDate, endDate } });
+            const res = await api.get(`${API_BASE}/day-wise`, { ...getAuthConfig(), params: { startDate, endDate } });
             return res.data.data;
         },
         enabled: shouldFetch && !!startDate && !!endDate,
@@ -266,7 +266,7 @@ const OrderBillsReport = () => {
     const { data, isLoading, isError } = useQuery({
         queryKey: ['orderBills', startDate, endDate, type],
         queryFn: async () => {
-            const res = await axios.get(`${API_BASE}/order-bills`, { ...getAuthConfig(), params: { startDate, endDate, type } });
+            const res = await api.get(`${API_BASE}/order-bills`, { ...getAuthConfig(), params: { startDate, endDate, type } });
             return res.data.data;
         },
         enabled: shouldFetch && !!startDate && !!endDate,
@@ -409,7 +409,7 @@ const SubscriptionReport = () => {
     const { data, isLoading, isError } = useQuery({
         queryKey: ['subscriptionReport', status],
         queryFn: async () => {
-            const res = await axios.get(`${API_BASE}/subscriptions`, { ...getAuthConfig(), params: { status } });
+            const res = await api.get(`${API_BASE}/subscriptions`, { ...getAuthConfig(), params: { status } });
             return res.data.data;
         }, enabled: shouldFetch, retry: 1
     });
@@ -526,7 +526,7 @@ const ReportsTab = () => {
     const [activeReport, setActiveReport] = useState('day-wise');
 
     const fetchReports = async () => {
-        const res = await axios.get(`${API_BASE}/summary`, getAuthConfig());
+        const res = await api.get(`${API_BASE}/summary`, getAuthConfig());
         return res.data.data;
     };
 

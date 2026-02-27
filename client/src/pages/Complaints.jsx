@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../lib/api';
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
 import { MessageSquare, Send, Clock, CheckCircle, AlertCircle, Phone, Mail, MapPin } from 'lucide-react';
@@ -22,7 +22,7 @@ const Complaints = () => {
                         Authorization: `Bearer ${localStorage.getItem('token')}`,
                     },
                 };
-                const res = await axios.get('http://127.0.0.1:5000/api/complaints/my', config);
+                const res = await api.get('/api/complaints/my', config);
                 setComplaints(res.data);
                 setLoading(false);
             } catch (error) {
@@ -54,8 +54,8 @@ const Complaints = () => {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
                 },
             };
-            const res = await axios.post(
-                'http://127.0.0.1:5000/api/complaints',
+            const res = await api.post(
+                '/api/complaints',
                 { subject, description },
                 config
             );

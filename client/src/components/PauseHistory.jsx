@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import {
     Calendar, XCircle, Clock, History,
     ArrowRight, CheckCircle2, AlertCircle, Trash2
@@ -17,7 +17,7 @@ const PauseHistory = ({ refreshTrigger }) => {
             const config = {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             };
-            const res = await axios.get('http://127.0.0.1:5000/api/delivery-pauses', config);
+            const res = await api.get('/api/delivery-pauses', config);
             setPauses(res.data);
         } catch (error) {
             console.error('Error fetching pauses:', error);
@@ -37,7 +37,7 @@ const PauseHistory = ({ refreshTrigger }) => {
             const config = {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             };
-            await axios.put(`http://127.0.0.1:5000/api/delivery-pauses/${pauseId}/cancel`, {}, config);
+            await api.put(`/api/delivery-pauses/${pauseId}/cancel`, {}, config);
             showNotification('Pause cancelled successfully', 'success');
             fetchPauses();
         } catch (error) {

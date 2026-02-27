@@ -1,6 +1,10 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+/**
+ * Middleware: Protect routes by requiring a valid JWT token.
+ * Attaches the user object to req.user for downstream handlers.
+ */
 const protect = async (req, res, next) => {
     let token;
 
@@ -10,36 +14,42 @@ const protect = async (req, res, next) => {
     ) {
         try {
             token = req.headers.authorization.split(' ')[1];
-
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
             req.user = await User.findById(decoded.id).select('-password');
 
-            next();
+            if (!req.user) {
+                return res.status(401).json({ message: 'Not authorized, user not found' });
+            }
+
+            return next();
         } catch (error) {
-            console.error(error);
-            res.status(401).json({ message: 'Not authorized, token failed' });
+            return res.status(401).json({ message: 'Not authorized, token failed' });
         }
     }
 
-    if (!token) {
-        res.status(401).json({ message: 'Not authorized, no token' });
-    }
+    // No token at all
+    return res.status(401).json({ message: 'Not authorized, no token' });
 };
 
+/**
+ * Middleware: Restrict to admin-only routes.
+ */
 const admin = (req, res, next) => {
     if (req.user && req.user.role === 'admin') {
         next();
     } else {
-        res.status(401).json({ message: 'Not authorized as an admin' });
+        res.status(403).json({ message: 'Not authorized as an admin' });
     }
 };
 
+/**
+ * Middleware: Restrict to employee or admin routes.
+ */
 const employee = (req, res, next) => {
     if (req.user && (req.user.role === 'employee' || req.user.role === 'admin')) {
         next();
     } else {
-        res.status(401).json({ message: 'Not authorized as an employee' });
+        res.status(403).json({ message: 'Not authorized as an employee' });
     }
 };
 

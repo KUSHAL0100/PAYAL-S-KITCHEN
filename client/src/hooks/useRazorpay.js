@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 
 const useRazorpay = () => {
     const [loading, setLoading] = useState(false);
@@ -24,7 +24,7 @@ const useRazorpay = () => {
         description,
         onSuccess,
         onError,
-        verifyUrl,
+        verifyUrl, // This is now a relative path like '/api/subscriptions/verify'
         showNotification
     }) => {
         setLoading(true);
@@ -45,14 +45,10 @@ const useRazorpay = () => {
             order_id: orderId,
             handler: async function (response) {
                 try {
-                    const verifyConfig = {
-                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-                    };
-
-                    const verificationRes = await axios.post(verifyUrl, {
+                    const verificationRes = await api.post(verifyUrl, {
                         ...response,
                         ...metadata
-                    }, verifyConfig);
+                    });
 
                     onSuccess(verificationRes.data, response);
                 } catch (error) {

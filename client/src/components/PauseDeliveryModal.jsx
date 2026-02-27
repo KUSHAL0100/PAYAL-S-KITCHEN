@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { X, Calendar, AlertCircle, Info, Clock, CheckCircle2 } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 
@@ -33,7 +33,7 @@ const PauseDeliveryModal = ({ isOpen, onClose, subscription, onSuccess }) => {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             };
 
-            await axios.post('http://127.0.0.1:5000/api/delivery-pauses', {
+            await api.post('/api/delivery-pauses', {
                 subscriptionId: subscription._id,
                 startDate,
                 endDate

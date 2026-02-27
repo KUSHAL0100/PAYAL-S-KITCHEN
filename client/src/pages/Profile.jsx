@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
 import { Link } from 'react-router-dom';
@@ -82,7 +82,7 @@ const Profile = () => {
                 payload.password = formData.password;
             }
 
-            const { data } = await axios.put('http://127.0.0.1:5000/api/auth/profile', payload, config);
+            const { data } = await api.put('/api/auth/profile', payload, config);
 
             setUser(data);
             localStorage.setItem('user', JSON.stringify(data));

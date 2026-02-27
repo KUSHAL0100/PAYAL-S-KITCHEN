@@ -1,13 +1,5 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
-import axios from 'axios';
-
-const API_URL = 'http://127.0.0.1:5000/api/coupons';
-
-const getAuthHeader = () => ({
-    headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-    },
-});
+import api from '../lib/api';
 
 /**
  * Fetches all active coupons.
@@ -16,7 +8,7 @@ export const useActiveCoupons = () => {
     return useQuery({
         queryKey: ['coupons', 'active'],
         queryFn: async () => {
-            const { data } = await axios.get(`${API_URL}/active`, getAuthHeader());
+            const { data } = await api.get('/api/coupons/active');
             return data;
         },
         staleTime: 10 * 60 * 1000,
@@ -29,11 +21,7 @@ export const useActiveCoupons = () => {
 export const useValidateCoupon = () => {
     return useMutation({
         mutationFn: async (code) => {
-            const { data } = await axios.post(
-                `${API_URL}/validate`,
-                { code },
-                getAuthHeader()
-            );
+            const { data } = await api.post('/api/coupons/validate', { code });
             return data;
         },
     });

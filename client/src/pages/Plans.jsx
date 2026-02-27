@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { Check, AlertCircle, MapPin, CheckCircle, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
@@ -47,7 +47,7 @@ const Plans = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const res = await axios.get('http://127.0.0.1:5000/api/plans');
+                const res = await api.get('/api/plans');
                 setPlans(res.data);
 
                 // Fetch current subscription if user is logged in
@@ -56,7 +56,7 @@ const Plans = () => {
                         const config = {
                             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
                         };
-                        const subRes = await axios.get('http://127.0.0.1:5000/api/subscriptions/me', config);
+                        const subRes = await api.get('/api/subscriptions/me', config);
                         setCurrentSubscription(subRes.data);
                     } catch (error) {
                         // No active subscription, that's okay
@@ -164,8 +164,8 @@ const Plans = () => {
             }
 
             // 1. Initiate Subscription (Creation/Calculation)
-            const { data: orderData } = await axios.post(
-                'http://127.0.0.1:5000/api/subscriptions',
+            const { data: orderData } = await api.post(
+                '/api/subscriptions',
                 payload,
                 config
             );
@@ -183,7 +183,7 @@ const Plans = () => {
                     dinnerAddress: payload.dinnerAddress
                 };
 
-                await axios.post('http://127.0.0.1:5000/api/subscriptions/verify', verifyPayload, config);
+                await api.post('/api/subscriptions/verify', verifyPayload, config);
 
                 queryClient.invalidateQueries({ queryKey: ['orderStats'] });
                 showNotification('Subscription upgraded successfully! (Free upgrade)', 'success');
@@ -205,7 +205,7 @@ const Plans = () => {
                 orderId: orderData.orderId,
                 user: user,
                 description: `Subscribe to ${selectedPlan.name} (${selectedPlan.duration})`,
-                verifyUrl: 'http://127.0.0.1:5000/api/subscriptions/verify',
+                verifyUrl: '/api/subscriptions/verify',
                 metadata: paymentMetadata,
                 showNotification,
                 onSuccess: (data) => {

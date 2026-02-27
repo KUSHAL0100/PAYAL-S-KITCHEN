@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { useNavigate } from 'react-router-dom';
 import CartContext from '../context/CartContext';
 import AuthContext from '../context/AuthContext';
@@ -150,8 +150,8 @@ const Cart = () => {
                 },
             };
 
-            const { data: orderData } = await axios.post(
-                'http://127.0.0.1:5000/api/orders/razorpay',
+            const { data: orderData } = await api.post(
+                '/api/orders/razorpay',
                 { amount: finalTotal },
                 config
             );
@@ -166,7 +166,7 @@ const Cart = () => {
                 orderId: orderData.id,
                 user: user,
                 description: "Meal Order Payment",
-                verifyUrl: 'http://127.0.0.1:5000/api/orders/verify',
+                verifyUrl: '/api/orders/verify',
                 metadata: { deliveryAddress, type: orderType },
                 showNotification,
                 onSuccess: async (verificationData, razorpayRawResponse) => {
@@ -213,7 +213,7 @@ const Cart = () => {
                     };
 
                     try {
-                        await axios.post('http://127.0.0.1:5000/api/orders', finalOrderData, config);
+                        await api.post('/api/orders', finalOrderData, config);
                         queryClient.invalidateQueries({ queryKey: ['orderStats'] });
                         clearCart();
                         showNotification('Order placed successfully!', 'success');

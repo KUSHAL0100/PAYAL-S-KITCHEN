@@ -1,33 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../lib/api';
 
 const fetchOrderStats = async () => {
-    const config = {
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-    };
-    const { data } = await axios.get('http://127.0.0.1:5000/api/orders/my-stats', config);
+    const { data } = await api.get('/api/orders/my-stats');
     return data;
 };
 
 const fetchMyOrders = async () => {
-    const config = {
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-    };
-    const { data } = await axios.get('http://127.0.0.1:5000/api/orders/myorders', config);
+    const { data } = await api.get('/api/orders/myorders');
     return data;
 };
 
-const cancelOrder = async (orderId) => {
-    const config = {
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-    };
-    const { data } = await axios.put(`http://127.0.0.1:5000/api/orders/${orderId}/cancel`, {}, config);
+const cancelOrderFn = async (orderId) => {
+    const { data } = await api.put(`/api/orders/${orderId}/cancel`);
     return data;
 };
 
@@ -38,8 +23,8 @@ export const useOrderStats = (userId) => {
     return useQuery({
         queryKey: ['orderStats', userId],
         queryFn: fetchOrderStats,
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        enabled: !!userId, // Only fetch when a user is logged in
+        staleTime: 5 * 60 * 1000,
+        enabled: !!userId,
     });
 };
 
@@ -50,7 +35,7 @@ export const useMyOrders = () => {
     return useQuery({
         queryKey: ['myOrders'],
         queryFn: fetchMyOrders,
-        staleTime: 60 * 1000, // 1 minute
+        staleTime: 60 * 1000,
     });
 };
 
@@ -61,9 +46,8 @@ export const useCancelOrder = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: cancelOrder,
+        mutationFn: cancelOrderFn,
         onSuccess: () => {
-            // Invalidate and refetch orders and stats to keep UI in sync
             queryClient.invalidateQueries({ queryKey: ['myOrders'] });
             queryClient.invalidateQueries({ queryKey: ['orderStats'] });
         },

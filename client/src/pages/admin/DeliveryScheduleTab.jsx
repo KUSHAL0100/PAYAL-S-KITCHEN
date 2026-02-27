@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../lib/api';
 import {
     Calendar, Package, MapPin, Phone, User, Utensils,
     AlertCircle, Search, Filter, ChevronRight, CheckCircle2,
@@ -129,7 +129,7 @@ const DeliveryScheduleTab = () => {
             const config = {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             };
-            const res = await axios.get(`http://127.0.0.1:5000/api/admin/delivery-schedule?date=${selectedDate}`, config);
+            const res = await api.get(`/api/admin/delivery-schedule?date=${selectedDate}`, config);
             setSchedule(res.data || { Basic: [], Premium: [], Exotic: [], Events: [] });
         } catch (error) {
             console.error('Error fetching schedule:', error);

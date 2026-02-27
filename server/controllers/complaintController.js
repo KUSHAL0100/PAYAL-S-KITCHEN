@@ -1,21 +1,23 @@
-const Complaint = require('../models/Complaint');
+const complaintRepo = require('../repositories/complaintRepository');
+
+/**
+ * Controller: Handles HTTP requests/responses for Complaints.
+ * DB operations are in complaintRepository.
+ */
 
 // @desc    Create a complaint
 // @route   POST /api/complaints
 // @access  Private
 const createComplaint = async (req, res) => {
     const { subject, description, orderId } = req.body;
-
     try {
-        const complaint = new Complaint({
+        const complaint = await complaintRepo.create({
             user: req.user._id,
             order: orderId,
             subject,
             description,
         });
-
-        const createdComplaint = await complaint.save();
-        res.status(201).json(createdComplaint);
+        res.status(201).json(complaint);
     } catch (error) {
         res.status(400).json({ message: 'Invalid complaint data' });
     }
@@ -26,7 +28,7 @@ const createComplaint = async (req, res) => {
 // @access  Private
 const getMyComplaints = async (req, res) => {
     try {
-        const complaints = await Complaint.find({ user: req.user._id }).sort({ createdAt: -1 });
+        const complaints = await complaintRepo.findByUserId(req.user._id);
         res.json(complaints);
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
@@ -38,7 +40,7 @@ const getMyComplaints = async (req, res) => {
 // @access  Private/Admin/Employee
 const getComplaints = async (req, res) => {
     try {
-        const complaints = await Complaint.find({}).populate('user', 'name email').sort({ createdAt: -1 });
+        const complaints = await complaintRepo.findAll();
         res.json(complaints);
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
@@ -50,20 +52,16 @@ const getComplaints = async (req, res) => {
 // @access  Private/Admin/Employee
 const updateComplaint = async (req, res) => {
     const { status, resolution } = req.body;
-
     try {
-        const complaint = await Complaint.findById(req.params.id);
+        const complaint = await complaintRepo.findById(req.params.id);
+        if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
 
-        if (complaint) {
-            complaint.status = status || complaint.status;
-            complaint.resolution = resolution || complaint.resolution;
-            complaint.assignedTo = req.user._id; // Assign to current employee/admin updating it
+        complaint.status = status || complaint.status;
+        complaint.resolution = resolution || complaint.resolution;
+        complaint.assignedTo = req.user._id;
 
-            const updatedComplaint = await complaint.save();
-            res.json(updatedComplaint);
-        } else {
-            res.status(404).json({ message: 'Complaint not found' });
-        }
+        const updatedComplaint = await complaintRepo.save(complaint);
+        res.json(updatedComplaint);
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
     }

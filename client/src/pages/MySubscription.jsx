@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Calendar, AlertCircle, TrendingUp, X, Info, CheckCircle, ClipboardList, Clock } from 'lucide-react';
@@ -60,11 +60,11 @@ const MySubscription = () => {
             };
 
             // Fetch current subscription
-            const subRes = await axios.get('http://127.0.0.1:5000/api/subscriptions/me', config);
+            const subRes = await api.get('/api/subscriptions/me', config);
             setSubscription(subRes.data);
 
             // Fetch available upgrades
-            const upgradeRes = await axios.get('http://127.0.0.1:5000/api/subscriptions/available-upgrades', config);
+            const upgradeRes = await api.get('/api/subscriptions/available-upgrades', config);
             setAvailableUpgrades(upgradeRes.data.availableUpgrades || []);
 
         } catch (error) {
@@ -121,8 +121,8 @@ const MySubscription = () => {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             };
 
-            const { data: orderData } = await axios.post(
-                'http://127.0.0.1:5000/api/subscriptions/upgrade-init',
+            const { data: orderData } = await api.post(
+                '/api/subscriptions/upgrade-init',
                 {
                     newPlanId: selectedUpgradePlan._id,
                     newMealType: upgradeMealType,
@@ -138,7 +138,7 @@ const MySubscription = () => {
                 orderId: orderData.orderId,
                 user: user,
                 description: `Upgrade to ${selectedUpgradePlan.name}`,
-                verifyUrl: 'http://127.0.0.1:5000/api/subscriptions/upgrade-verify',
+                verifyUrl: '/api/subscriptions/upgrade-verify',
                 metadata: {
                     currentSubscriptionId: orderData.currentSubscriptionId,
                     newPlanId: orderData.newPlanId,
@@ -178,8 +178,8 @@ const MySubscription = () => {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             };
 
-            await axios.post(
-                'http://127.0.0.1:5000/api/subscriptions/cancel',
+            await api.post(
+                '/api/subscriptions/cancel',
                 { subscriptionId: subscription._id },
                 config
             );
@@ -220,7 +220,7 @@ const MySubscription = () => {
                 payload.deliveryAddress = editDeliveryAddress;
             }
 
-            await axios.put('http://127.0.0.1:5000/api/subscriptions/update-addresses', payload, config);
+            await api.put('/api/subscriptions/update-addresses', payload, config);
 
             showNotification('Delivery addresses updated successfully!', 'success');
             setIsEditAddressModalOpen(false);
