@@ -16,129 +16,125 @@ const connectDB = async () => {
     }
 };
 
-// --- DATA POOL ---
-const MAINS = {
-    curries: [
-        // North Indian / Paneer
-        'Paneer Butter Masala', 'Palak Paneer', 'Kadai Paneer', 'Shahi Paneer', 'Matar Paneer', 'Paneer Tikka Masala', 'Paneer Lababdar', 'Paneer Do Pyaza', 'Malai Kofta', 'Veg Kofta',
-        'Dum Aloo', 'Aloo Gobi', 'Aloo Matar', 'Jeera Aloo', 'Aloo Methi', 'Aloo Baingan', 'Bhindi Masala', 'Kurkuri Bhindi', 'Bharwa Bhindi',
-        'Mix Veg', 'Veg Kolhapuri', 'Veg Jalfrezi', 'Veg Makhanwala', 'Navratan Korma', 'Mushroom Masala', 'Matar Mushroom', 'Corn Palak', 'Methi Malai Matar',
-        'Chana Masala', 'Pindi Chole', 'Rajma Masala', 'Dal Makhani', 'Dal Tadka', 'Dal Fry', 'Dal Palak', 'Panchmel Dal', 'Moong Dal', 'Masoor Dal',
-        'Baingan Bharta', 'Lauki Kofta', 'Gatte Ki Sabzi', 'Sev Tamatar', 'Kaju Curry', 'Khoya Kaju', 'Stuffed Capsicum', 'Sarson Ka Saag', 'Undhiyu',
-        'Aloo Shimla Mirch', 'Paneer Bhurji', 'Corn Masala', 'Veg Handi', 'Hariyali Kofta', 'Nargisi Kofta (Veg)', 'Kashmiri Dum Aloo', 'Dahi Bhindi',
-        'Achari Aloo', 'Methi Aloo', 'Raw Banana Curry', 'Drumstick Curry', 'Kathal Masala (Jackfruit)', 'Arbi Masala', 'Tinda Masala', 'Lauki Chana Dal',
-        'Ridge Gourd Curry', 'Snake Gourd Masala', 'Pumpkin Masala', 'Sweet Potato Curry', 'Black Eyed Peas Curry', 'Lobia Masala', 'Green Gram Curry',
-        'Horse Gram Curry', 'Sprouted Moong Curry', 'Soyabean Curry', 'Soya Chaap Masala', 'Paneer Pasanda', 'Mughlai Paneer', 'Handi Paneer', 'Tawa Paneer',
-        'Paneer Kali Mirch', 'Paneer Kolhapuri', 'Paneer Makhani', 'Paneer Methi Malai', 'Paneer Jalfrezi', 'Paneer Korma', 'Paneer Bharta',
-        'Aloo Raswala', 'Aloo Tamatar', 'Aloo Chole', 'Aloo Palak', 'Aloo Beans Curry', 'Aloo Gajar Matar', 'Gobi Masala', 'Gobi Matar',
-        'Bhindi Do Pyaza', 'Bhindi Aloo', 'Bhindi Masala Gravy', 'Karela Masala', 'Karela Bharwa', 'Baingan Masala', 'Baingan Aloo',
-        'Mushroom Matar', 'Mushroom Do Pyaza', 'Mushroom Kadai', 'Corn Capsicum Masala', 'Baby Corn Masala', 'Corn Methi Malai',
+// ============================================================
+// FIXED WEEKLY MENU TEMPLATES (Sun=0 to Sat=6)
+// Same menu repeats every week for the entire date range.
+// Units are embedded in item names for display.
+// ============================================================
 
-        // South Indian
-        'Avial', 'Sambar', 'Mixed Veg Sambar', 'Drumstick Sambar', 'Radish Sambar', 'Pumpkin Sambar', 'Okra Sambar', 'Brinjal Sambar',
-        'Rasam', 'Tomato Rasam', 'Pepper Rasam', 'Lemon Rasam', 'Mysore Rasam', 'Garlic Rasam',
-        'Poricha Kuzhambu', 'Vatha Kuzhambu', 'Mor Kuzhambu', 'Theeyal', 'Kootu', 'Cabbage Kootu', 'Snake Gourd Kootu', 'Pumpkin Kootu',
-        'Chow Chow Kootu', 'Beans Kootu', 'Spinach Kootu', 'Vegetable Stew', 'Kurma', 'Veg Kurma', 'Potato Kurma', 'Peas Kurma',
+const BASIC_WEEKLY = [
+    // Sunday
+    {
+        lunch: ['Aloo Baingan (250g)', 'Veg Jalfrezi (150g)', 'Tamarind Rice (200g)', 'Chapati (3 pcs)'],
+        dinner: ['Masoor Dal (250g)', 'Methi Rice (200g)'],
+    },
+    // Monday
+    {
+        lunch: ['Karela Masala (250g)', 'Hariyali Kofta (150g)', 'Tamarind Rice (200g)', 'Palak Poori (3 pcs)'],
+        dinner: ['Gobi Masala (250g)', 'Paneer Pulao (200g)'],
+    },
+    // Tuesday
+    {
+        lunch: ['Drumstick Sambar (250g)', 'Pithla (150g)', 'Corn Pulao (200g)', 'Paneer Paratha (2 pcs)'],
+        dinner: ['Paneer Methi Malai (250g)', 'Schezwan Fried Rice (200g)'],
+    },
+    // Wednesday
+    {
+        lunch: ['Palak Paneer (250g)', 'Aloo Chole (150g)', 'Curd Rice (200g)', 'Butter Roti (3 pcs)'],
+        dinner: ['Ridge Gourd Curry (250g)', 'Kulcha (2 pcs)'],
+    },
+    // Thursday
+    {
+        lunch: ['Lobia Masala (250g)', 'Sev Tameta Nu Shaak (150g)', 'Tawa Pulao (200g)', 'Amritsari Kulcha (2 pcs)'],
+        dinner: ['Mushroom Kadai (250g)', 'Kashmiri Pulao (200g)'],
+    },
+    // Friday
+    {
+        lunch: ['Beans Kootu (250g)', 'Paneer Tikka Masala (150g)', 'Capsicum Rice (200g)', 'Garlic Naan (2 pcs)'],
+        dinner: ['Dal Tadka (250g)', 'Poori (3 pcs)'],
+    },
+    // Saturday
+    {
+        lunch: ['Brinjal Sambar (250g)', 'Beans Poriyal (150g)', 'Coconut Rice (200g)', 'Ajwain Paratha (2 pcs)'],
+        dinner: ['Garlic Rasam (250g)', 'Tawa Pulao (200g)'],
+    },
+];
 
-        // Maharashtrian / Gujarati / Others
-        'Bharli Vangi', 'Pithla', 'Usal', 'Misal', 'Matki Chi Usal', 'Zunka', 'Shev Bhaji', 'Patodi Rassa', 'Vangyache Bharit',
-        'Sev Tameta Nu Shaak', 'Ringan Oro', 'Batata Nu Shaak', 'Undhiyu (Gujarati)', 'Kadhi Pakora', 'Punjabi Kadhi', 'Gujarati Kadhi', 'Rajasthani Kadhi',
-        'Sindhi Kadhi', 'Dahi Aloo', 'Dahi Baingan', 'Dahi Gobi', 'Dahi Vada (Side)', 'Kalan (Kerala)', 'Olan', 'Erissery'
-    ],
-    dryVeg: [
-        'Aloo Jeera', 'Aloo Fry', 'Bhindi Fry', 'Karela Fry', 'Tinda Fry', 'Arbi Fry', 'Gobi Manchurian Dry', 'Cabbage Foogath', 'Beans Poriyal', 'Carrot Peas',
-        'Aloo Beans', 'Shimla Mirch Aloo', 'Raw Banana Fry', 'Yam Fry', 'Ivy Gourd Fry', 'Cluster Beans', 'Beetroot Poriyal', 'Carrot Poriyal', 'Snake Gourd Fry',
-        'Brinjal Fry', 'Colocasia Fry', 'Plantain Fry', 'Broad Beans Fry', 'Scarlet Gourd Fry', 'Radish Fry', 'Turnip Fry', 'Knol Khol Fry',
-        'Cabbage Thoran', 'Beans Thoran', 'Carrot Thoran', 'Beetroot Thoran', 'Mixed Veg Thoran', 'Spinach Thoran', 'Amaranth Leaves Fry',
-        'Methi Bhaji', 'Palak Bhaji', 'Chulai Bhaji', 'Sarson Bhaji', 'Radish Greens', 'Turnip Greens', 'Cauliflower Fry', 'Broccoli Stir Fry',
-        'Zucchini Stir Fry', 'Asparagus Stir Fry', 'French Beans Fry', 'Long Beans Fry', 'Kovakkai Fry', 'Vazhakkai Fry', 'Senai Kizhangu Varuval'
-    ],
-    international: [
-        'Pasta Alfredo', 'Pasta Arrabbiata', 'Pesto Pasta', 'Lasagna', 'Risotto', 'Pizza Margherita', 'Veggie Pizza', 'Garlic Bread', 'Bruschetta',
-        'Tacos', 'Burritos', 'Quesadillas', 'Enchiladas', 'Nachos', 'Thai Green Curry', 'Thai Red Curry', 'Pad Thai', 'Fried Rice', 'Hakka Noodles',
-        'Schezwan Noodles', 'Manchurian Gravy', 'Sushi', 'Ramen', 'Falafel Wrap', 'Hummus with Pita', 'Mac and Cheese', 'Spaghetti Aglio e Olio',
-        'Ratatouille', 'Moussaka', 'Shepherd\'s Pie (Veg)', 'Stuffed Bell Peppers', 'Vegetable Au Gratin', 'Spinach Corn Sandwich', 'Club Sandwich',
-        'Burger', 'Veggie Burger', 'Paneer Burger', 'Bean Burger', 'Sub Sandwich', 'Panini', 'Wrap', 'Burrito Bowl', 'Taco Salad',
-        'Stir Fry Veggies', 'Kung Pao Veg', 'Sweet and Sour Veg', 'Chilli Paneer', 'Chilli Gobi', 'Chilli Mushroom', 'Chilli Baby Corn',
-        'Vegetable Lasagna', 'Spinach Ravioli', 'Mushroom Risotto', 'Greek Pizza', 'Mexican Rice', 'Bean Enchiladas', 'Queso Dip', 'Guacamole',
-        'Spring Rolls (Thai)', 'Papaya Salad', 'Tom Yum Soup', 'Minestrone Soup', 'Cream of Mushroom Soup', 'Potato Leek Soup', 'Pumpkin Soup'
-    ],
-    sweets: [
-        'Gulab Jamun', 'Rasgulla', 'Rasmalai', 'Kheer', 'Rice Kheer', 'Seviyan Kheer', 'Gajar Ka Halwa', 'Moong Dal Halwa', 'Sooji Halwa', 'Besan Ladoo',
-        'Motichoor Ladoo', 'Kaju Katli', 'Jalebi', 'Rabri', 'Shrikhand', 'Amrakhand', 'Mysore Pak', 'Kalakand', 'Sandesh', 'Cham Cham', 'Peda', 'Barfi',
-        'Ice Cream (Vanilla)', 'Ice Cream (Chocolate)', 'Ice Cream (Strawberry)', 'Ice Cream (Butterscotch)', 'Kulfi', 'Falooda', 'Fruit Salad with Cream', 'Brownie',
-        'Coconut Ladoo', 'Rava Ladoo', 'Puran Poli', 'Modak', 'Basundi', 'Phirni', 'Double Ka Meetha', 'Shahi Tukda', 'Malpua', 'Ghevar', 'Boondi Ladoo',
-        'Atta Ladoo', 'Pinni', 'Panjiri', 'Sheer Khurma', 'Vermicelli Pudding', 'Caramel Custard', 'Fruit Custard', 'Trifle', 'Mousse', 'Tart', 'Pastry',
-        'Chocolate Cake', 'Vanilla Cake', 'Red Velvet Cake', 'Cupcake', 'Donut', 'Eclair', 'Macaron', 'Tiramisu', 'Cheesecake', 'Panna Cotta',
-        'Apple Pie', 'Banana Bread', 'Muffin', 'Cookie', 'Biscuit', 'Choco Lava Cake', 'Sizzling Brownie', 'Sundae', 'Banana Split', 'Waffle', 'Pancake'
-    ],
-    snacks: [
-        'Samosa', 'Kachori', 'Dhokla', 'Khandvi', 'Mirchi Vada', 'Vada Pav', 'Pav Bhaji', 'Bhel Puri', 'Sev Puri', 'Dahi Puri', 'Pani Puri', 'Aloo Tikki',
-        'Spring Rolls', 'Momos', 'French Fries', 'Wedges', 'Cutlet', 'Bread Pakora', 'Onion Pakora', 'Paneer Pakora', 'Sandwich', 'Burger', 'Pizza Slice',
-        'Sabudana Vada', 'Medu Vada', 'Masala Vada', 'Corn Cheese Balls', 'Hara Bhara Kabab', 'Veg Puff', 'Paneer Puff', 'Aloo Bond', 'Mysore Bonda',
-        'Gobi 65', 'Paneer 65', 'Mushroom 65', 'Baby Corn 65', 'Veg Lollipop', 'Cheese Balls', 'Nachos with Salsa', 'Garlic Breadsticks',
-        'Onion Rings', 'Mozzarella Sticks', 'Jalapeno Poppers', 'Bruschetta', 'Canapes', 'Mini Tacos', 'Stuffed Mushrooms', 'Veg Satay'
-    ]
-};
+const PREMIUM_WEEKLY = [
+    // Sunday
+    {
+        lunch: ['Paneer Butter Masala (250g)', 'Kadai Paneer (250g)', 'Jeera Rice (200g)', 'Butter Naan (2 pcs)', 'Gulab Jamun (2 pcs)', 'Green Salad (100g)'],
+        dinner: ['Shahi Paneer (250g)', 'Laccha Paratha (2 pcs)', 'Kachumber Salad (100g)'],
+    },
+    // Monday
+    {
+        lunch: ['Dal Makhani (250g)', 'Matar Paneer (250g)', 'Peas Pulao (200g)', 'Garlic Naan (2 pcs)', 'Rasmalai (2 pcs)', 'Cucumber Salad (100g)'],
+        dinner: ['Aloo Gobi (250g)', 'Jeera Rice (200g)', 'Sprouts Salad (100g)'],
+    },
+    // Tuesday
+    {
+        lunch: ['Rajma Masala (250g)', 'Paneer Do Pyaza (250g)', 'Veg Pulao (200g)', 'Tandoori Roti (2 pcs)', 'Gajar Ka Halwa (100g)', 'Beetroot Salad (100g)'],
+        dinner: ['Mix Veg (250g)', 'Chapati (3 pcs)', 'Onion Salad (100g)'],
+    },
+    // Wednesday
+    {
+        lunch: ['Chole Masala (250g)', 'Mushroom Masala (250g)', 'Ghee Rice (200g)', 'Kulcha (2 pcs)', 'Seviyan Kheer (100g)', 'Carrot Salad (100g)'],
+        dinner: ['Paneer Korma (250g)', 'Butter Roti (3 pcs)', 'Green Salad (100g)'],
+    },
+    // Thursday
+    {
+        lunch: ['Malai Kofta (250g)', 'Bhindi Masala (250g)', 'Veg Biryani (200g)', 'Missi Roti (2 pcs)', 'Sooji Halwa (100g)', 'Tomato Salad (100g)'],
+        dinner: ['Dal Fry (250g)', 'Paneer Pulao (200g)', 'Kachumber Salad (100g)'],
+    },
+    // Friday
+    {
+        lunch: ['Navratan Korma (250g)', 'Paneer Bhurji (250g)', 'Kashmiri Pulao (200g)', 'Cheese Naan (2 pcs)', 'Kheer (100g)', 'Coleslaw (100g)'],
+        dinner: ['Veg Kolhapuri (250g)', 'Chapati (3 pcs)', 'Cucumber Salad (100g)'],
+    },
+    // Saturday
+    {
+        lunch: ['Paneer Tikka Masala (250g)', 'Aloo Methi (250g)', 'Lemon Rice (200g)', 'Garlic Naan (2 pcs)', 'Jalebi (3 pcs)', 'Sprouts Salad (100g)'],
+        dinner: ['Dum Aloo (250g)', 'Methi Paratha (2 pcs)', 'Green Salad (100g)'],
+    },
+];
 
-const STAPLES = {
-    rice: [
-        'Steamed Rice', 'Jeera Rice', 'Peas Pulao', 'Veg Pulao', 'Veg Biryani', 'Hyderabadi Veg Biryani', 'Kashmiri Pulao', 'Corn Pulao', 'Paneer Pulao',
-        'Lemon Rice', 'Curd Rice', 'Tomato Rice', 'Tamarind Rice', 'Coconut Rice', 'Ghee Rice', 'Saffron Rice', 'Brown Rice', 'Masala Khichdi', 'Moong Dal Khichdi',
-        'Mint Rice', 'Coriander Rice', 'Methi Rice', 'Palak Rice', 'Beetroot Rice', 'Carrot Rice', 'Capsicum Rice', 'Tawa Pulao', 'Schezwan Fried Rice'
-    ],
-    breads: [
-        'Roti', 'Chapati', 'Phulka', 'Butter Roti', 'Plain Paratha', 'Aloo Paratha', 'Gobi Paratha', 'Paneer Paratha', 'Methi Paratha', 'Mooli Paratha',
-        'Missi Roti', 'Naan', 'Butter Naan', 'Garlic Naan', 'Kulcha', 'Amritsari Kulcha', 'Bhatura', 'Poori', 'Palak Poori', 'Bedmi Poori',
-        'Ajwain Paratha', 'Laccha Paratha', 'Onion Kulcha', 'Paneer Kulcha', 'Cheese Naan', 'Chilli Garlic Naan', 'Tandoori Roti', 'Rumali Roti'
-    ],
-    salads: [
-        'Green Salad', 'Cucumber Salad', 'Tomato Salad', 'Onion Salad', 'Kachumber Salad', 'Sprouts Salad', 'Corn Salad', 'Russian Salad', 'Macaroni Salad',
-        'Coleslaw', 'Beetroot Salad', 'Carrot Salad', 'Fruit Salad', 'Greek Salad', 'Caesar Salad', 'Pasta Salad', 'Chickpea Salad', 'Three Bean Salad',
-        'Waldorf Salad', 'Potato Salad', 'Egg Salad (Veg)', 'Tossed Salad', 'Kimchi', 'Som Tam (Papaya Salad)', 'Quinoa Salad', 'Couscous Salad'
-    ],
-    soups: [
-        'Tomato Soup', 'Sweet Corn Soup', 'Hot and Sour Soup', 'Manchow Soup', 'Lemon Coriander Soup', 'Vegetable Clear Soup', 'Cream of Mushroom Soup',
-        'Minestrone Soup', 'Spinach Soup', 'Pumpkin Soup', 'Lentil Soup', 'Broccoli Soup', 'Mulligatawny Soup', 'Thukpa', 'Noodle Soup', 'Wonton Soup',
-        'French Onion Soup', 'Gazpacho', 'Miso Soup', 'Tom Yum Soup'
-    ]
-};
-
-// Helper to get random items ensuring uniqueness within a set
-const getRandomMains = (pool, count, usedSet) => {
-    const available = pool.filter(item => !usedSet.has(item));
-
-    let selectionPool = available;
-    if (available.length < count) {
-        // console.warn('Pool exhausted for unique items, reusing items.');
-        selectionPool = pool; // Fallback to reusing
-    }
-
-    const selected = [];
-    for (let i = 0; i < count; i++) {
-        if (selectionPool.length === 0) selectionPool = pool; // Safety net
-        const randomIndex = Math.floor(Math.random() * selectionPool.length);
-        const item = selectionPool[randomIndex];
-        selected.push(item);
-
-        // Remove from selection pool to avoid duplicates in THIS batch
-        selectionPool.splice(randomIndex, 1);
-
-        // Add to used set for the month
-        usedSet.add(item);
-    }
-    return selected;
-};
-
-// Helper for staples
-const getRandomStaples = (pool, count) => {
-    const selected = [];
-    for (let i = 0; i < count; i++) {
-        const randomIndex = Math.floor(Math.random() * pool.length);
-        selected.push(pool[randomIndex]);
-    }
-    return selected;
-};
+const EXOTIC_WEEKLY = [
+    // Sunday
+    {
+        lunch: ['Kaju Curry (250g)', 'Paneer Lababdar (250g)', 'Saffron Rice (200g)', 'Rumali Roti (2 pcs)', 'Samosa (2 pcs)', 'Kaju Katli (2 pcs)', 'Russian Salad (100g)'],
+        dinner: ['Kashmiri Dum Aloo (250g)', 'Laccha Paratha (2 pcs)', 'Rabri (100g)', 'Kachumber Salad (100g)'],
+    },
+    // Monday
+    {
+        lunch: ['Paneer Pasanda (250g)', 'Methi Malai Matar (250g)', 'Hyderabadi Veg Biryani (200g)', 'Butter Naan (2 pcs)', 'Hara Bhara Kabab (3 pcs)', 'Rasmalai (2 pcs)', 'Corn Salad (100g)'],
+        dinner: ['Mughlai Paneer (250g)', 'Ghee Rice (200g)', 'Shrikhand (100g)', 'Green Salad (100g)'],
+    },
+    // Tuesday
+    {
+        lunch: ['Shahi Paneer (250g)', 'Nargisi Kofta (250g)', 'Kashmiri Pulao (200g)', 'Cheese Naan (2 pcs)', 'Dhokla (3 pcs)', 'Gulab Jamun (2 pcs)', 'Beetroot Salad (100g)'],
+        dinner: ['Paneer Makhani (250g)', 'Garlic Naan (2 pcs)', 'Gajar Ka Halwa (100g)', 'Sprouts Salad (100g)'],
+    },
+    // Wednesday
+    {
+        lunch: ['Khoya Kaju (250g)', 'Handi Paneer (250g)', 'Veg Biryani (200g)', 'Amritsari Kulcha (2 pcs)', 'Paneer Tikka (3 pcs)', 'Moong Dal Halwa (100g)', 'Coleslaw (100g)'],
+        dinner: ['Malai Kofta (250g)', 'Rumali Roti (2 pcs)', 'Mysore Pak (2 pcs)', 'Tomato Salad (100g)'],
+    },
+    // Thursday
+    {
+        lunch: ['Paneer Kali Mirch (250g)', 'Navratan Korma (250g)', 'Saffron Rice (200g)', 'Paneer Kulcha (2 pcs)', 'Kachori (2 pcs)', 'Basundi (100g)', 'Russian Salad (100g)'],
+        dinner: ['Tawa Paneer (250g)', 'Hyderabadi Veg Biryani (200g)', 'Ice Cream (1 scoop)', 'Cucumber Salad (100g)'],
+    },
+    // Friday
+    {
+        lunch: ['Paneer Kolhapuri (250g)', 'Gatte Ki Sabzi (250g)', 'Mint Rice (200g)', 'Garlic Naan (2 pcs)', 'Gobi 65 (4 pcs)', 'Phirni (100g)', 'Chickpea Salad (100g)'],
+        dinner: ['Soya Chaap Masala (250g)', 'Laccha Paratha (2 pcs)', 'Brownie (1 pc)', 'Kachumber Salad (100g)'],
+    },
+    // Saturday
+    {
+        lunch: ['Paneer Pasanda (250g)', 'Kaju Curry (250g)', 'Hyderabadi Veg Biryani (200g)', 'Rumali Roti (2 pcs)', 'Paneer Pakora (4 pcs)', 'Kulfi (1 pc)', 'Corn Salad (100g)'],
+        dinner: ['Shahi Paneer (250g)', 'Saffron Rice (200g)', 'Kalakand (2 pcs)', 'Green Salad (100g)'],
+    },
+];
 
 const seedData = async () => {
     await connectDB();
@@ -162,7 +158,7 @@ const seedData = async () => {
             },
             {
                 name: 'Basic',
-                price: 30000, // 2 months free
+                price: 30000,
                 duration: 'yearly',
                 description: 'Simple home-cooked meals for everyday sustenance.',
                 features: ['Lunch, Dinner', 'Standard Menu', 'Weekend Special not included'],
@@ -177,7 +173,7 @@ const seedData = async () => {
             },
             {
                 name: 'Premium',
-                price: 50000, // 2 months free
+                price: 50000,
                 duration: 'yearly',
                 description: 'Delicious meals with added variety and sweets.',
                 features: ['Lunch, Dinner', 'Premium Menu', 'Includes Sweets & Salad', 'Weekend Special included'],
@@ -187,104 +183,54 @@ const seedData = async () => {
                 name: 'Exotic',
                 price: 8000,
                 duration: 'monthly',
-                description: 'Gourmet experience with multi-cuisine options.',
-                features: ['Lunch, Dinner', 'Exotic Menu', 'Includes Sweets, Salad, Soups', 'Weekend Special included', 'Customizable Spice Levels'],
+                description: 'Premium Indian dining experience with rich dishes.',
+                features: ['Lunch, Dinner', 'Exotic Menu', 'Includes Sweets, Salad, Snacks', 'Weekend Special included', 'Premium Indian Dishes'],
             },
             {
                 name: 'Exotic',
-                price: 80000, // 2 months free
+                price: 80000,
                 duration: 'yearly',
-                description: 'Gourmet experience with multi-cuisine options.',
-                features: ['Lunch, Dinner', 'Exotic Menu', 'Includes Sweets, Salad, Soups', 'Weekend Special included', 'Customizable Spice Levels'],
+                description: 'Premium Indian dining experience with rich dishes.',
+                features: ['Lunch, Dinner', 'Exotic Menu', 'Includes Sweets, Salad, Snacks', 'Weekend Special included', 'Premium Indian Dishes'],
             },
         ];
 
         await Plan.insertMany(plans);
         console.log('Plans Imported!');
 
-        // --- MENUS (Next 12 Months) ---
+        // --- MENUS (Dec 1, 2025 → Sep 30, 2026) ---
+        // Weekly rotation: same Sun–Sat menu repeats every week.
         const menus = [];
-        const startDate = new Date();
-        const endDate = new Date();
-        endDate.setFullYear(endDate.getFullYear() + 1);
+        const startDate = new Date('2025-12-01T00:00:00');
+        const endDate = new Date('2026-09-30T23:59:59');
 
         let currentDate = new Date(startDate);
 
-        const monthlyUsage = {};
-
         while (currentDate <= endDate) {
-            const monthIndex = currentDate.getMonth();
-            const year = currentDate.getFullYear();
-            const monthKey = `${year}-${monthIndex}`;
-
-            const dayOfWeek = currentDate.getDay(); // 0 is Sunday
+            const dayOfWeek = currentDate.getDay(); // 0=Sun, 6=Sat
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-            // Initialize sets for this month if not exists
-            if (!monthlyUsage[`Basic-${monthKey}`]) monthlyUsage[`Basic-${monthKey}`] = new Set();
-            if (!monthlyUsage[`Premium-${monthKey}`]) monthlyUsage[`Premium-${monthKey}`] = new Set();
-            if (!monthlyUsage[`Exotic-${monthKey}`]) monthlyUsage[`Exotic-${monthKey}`] = new Set();
-
-            // --- BASIC MENU ---
-            const basicLunch = [
-                ...getRandomMains(MAINS.curries, 1, monthlyUsage[`Basic-${monthKey}`]),
-                ...getRandomMains([...MAINS.dryVeg, ...MAINS.curries], 1, monthlyUsage[`Basic-${monthKey}`]),
-                ...getRandomStaples(STAPLES.rice, 1),
-                ...getRandomStaples(STAPLES.breads, 1)
-            ];
-            const basicDinner = [
-                ...getRandomMains([...MAINS.curries], 1, monthlyUsage[`Basic-${monthKey}`]),
-                ...getRandomStaples([...STAPLES.rice, ...STAPLES.breads], 1)
-            ];
-
+            // Basic
             menus.push({
                 date: new Date(currentDate),
                 planType: 'Basic',
-                items: { lunch: basicLunch, dinner: basicDinner },
+                items: BASIC_WEEKLY[dayOfWeek],
                 isWeekendSpecial: false,
             });
 
-            // --- PREMIUM MENU ---
-            const premiumLunch = [
-                ...getRandomMains(MAINS.curries, 1, monthlyUsage[`Premium-${monthKey}`]),
-                ...getRandomMains(MAINS.curries, 1, monthlyUsage[`Premium-${monthKey}`]),
-                ...getRandomStaples(STAPLES.rice, 1),
-                ...getRandomStaples(STAPLES.breads, 1),
-                ...getRandomMains(MAINS.sweets, 1, monthlyUsage[`Premium-${monthKey}`]),
-                ...getRandomStaples(STAPLES.salads, 1)
-            ];
-            const premiumDinner = [
-                ...getRandomMains(MAINS.curries, 1, monthlyUsage[`Premium-${monthKey}`]),
-                ...getRandomStaples([...STAPLES.breads, ...STAPLES.rice], 1),
-                ...getRandomStaples(STAPLES.salads, 1)
-            ];
-
+            // Premium
             menus.push({
                 date: new Date(currentDate),
                 planType: 'Premium',
-                items: { lunch: premiumLunch, dinner: premiumDinner },
+                items: PREMIUM_WEEKLY[dayOfWeek],
                 isWeekendSpecial: isWeekend,
             });
 
-            // --- EXOTIC MENU ---
-            const exoticLunch = [
-                ...getRandomMains([...MAINS.international, ...MAINS.curries], 1, monthlyUsage[`Exotic-${monthKey}`]),
-                ...getRandomStaples([...STAPLES.rice, ...STAPLES.breads], 1),
-                ...getRandomMains(MAINS.snacks, 1, monthlyUsage[`Exotic-${monthKey}`]),
-                ...getRandomMains(MAINS.sweets, 1, monthlyUsage[`Exotic-${monthKey}`]),
-                ...getRandomStaples(STAPLES.salads, 1)
-            ];
-            const exoticDinner = [
-                ...getRandomMains(MAINS.international, 1, monthlyUsage[`Exotic-${monthKey}`]),
-                ...getRandomStaples(STAPLES.soups, 1),
-                ...getRandomStaples(STAPLES.salads, 1),
-                ...getRandomMains(MAINS.sweets, 1, monthlyUsage[`Exotic-${monthKey}`])
-            ];
-
+            // Exotic
             menus.push({
                 date: new Date(currentDate),
                 planType: 'Exotic',
-                items: { lunch: exoticLunch, dinner: exoticDinner },
+                items: EXOTIC_WEEKLY[dayOfWeek],
                 isWeekendSpecial: isWeekend,
             });
 
@@ -296,38 +242,46 @@ const seedData = async () => {
         for (let i = 0; i < menus.length; i += chunkSize) {
             await Menu.insertMany(menus.slice(i, i + chunkSize));
         }
-        console.log('Menus Imported!');
+        console.log(`${menus.length} Menus Imported!`);
 
         // --- EVENT ITEMS ---
         const eventItems = [
             // Starters
-            { name: 'Paneer Tikka', category: 'Starter', price: 150, description: 'Spiced grilled cottage cheese chunks.' },
-            { name: 'Veg Manchurian', category: 'Starter', price: 120, description: 'Indo-Chinese fried veg balls.' },
-            { name: 'Hara Bhara Kabab', category: 'Starter', price: 130, description: 'Spinach and green pea patties.' },
-            { name: 'Spring Rolls', category: 'Starter', price: 100, description: 'Crispy rolls with veg filling.' },
+            { name: 'Paneer Tikka', category: 'Starter', price: 150, description: 'Spiced grilled cottage cheese chunks.', unit: 'per plate (6 pcs)' },
+            { name: 'Veg Manchurian', category: 'Starter', price: 120, description: 'Indo-Chinese fried veg balls.', unit: 'per plate (6 pcs)' },
+            { name: 'Hara Bhara Kabab', category: 'Starter', price: 130, description: 'Spinach and green pea patties.', unit: 'per plate (4 pcs)' },
+            { name: 'Spring Rolls', category: 'Starter', price: 100, description: 'Crispy rolls with veg filling.', unit: 'per plate (4 pcs)' },
+            { name: 'Aloo Tikki', category: 'Starter', price: 90, description: 'Crispy spiced potato patties.', unit: 'per plate (4 pcs)' },
+            { name: 'Corn Cheese Balls', category: 'Starter', price: 140, description: 'Crispy corn and cheese fritters.', unit: 'per plate (6 pcs)' },
 
             // Main Course
-            { name: 'Paneer Butter Masala', category: 'Main Course', price: 200, description: 'Rich tomato gravy with paneer.' },
-            { name: 'Dal Makhani', category: 'Main Course', price: 180, description: 'Creamy black lentils.' },
-            { name: 'Veg Biryani', category: 'Main Course', price: 160, description: 'Aromatic rice with vegetables.' },
-            { name: 'Malai Kofta', category: 'Main Course', price: 220, description: 'Fried dumplings in cashew gravy.' },
-            { name: 'Butter Naan', category: 'Main Course', price: 40, description: 'Soft flatbread with butter.' },
+            { name: 'Paneer Butter Masala', category: 'Main Course', price: 200, description: 'Rich tomato gravy with paneer.', unit: 'per bowl (250g)' },
+            { name: 'Dal Makhani', category: 'Main Course', price: 180, description: 'Creamy black lentils.', unit: 'per bowl (250g)' },
+            { name: 'Veg Biryani', category: 'Main Course', price: 160, description: 'Aromatic rice with vegetables.', unit: 'per plate (300g)' },
+            { name: 'Malai Kofta', category: 'Main Course', price: 220, description: 'Fried dumplings in cashew gravy.', unit: 'per bowl (250g)' },
+            { name: 'Butter Naan', category: 'Main Course', price: 40, description: 'Soft flatbread with butter.', unit: 'per piece' },
+            { name: 'Jeera Rice', category: 'Main Course', price: 100, description: 'Cumin tempered basmati rice.', unit: 'per plate (200g)' },
+            { name: 'Chole Masala', category: 'Main Course', price: 150, description: 'Spiced chickpea curry.', unit: 'per bowl (250g)' },
+            { name: 'Mix Veg', category: 'Main Course', price: 140, description: 'Seasonal mixed vegetables curry.', unit: 'per bowl (250g)' },
 
             // Desserts
-            { name: 'Gulab Jamun', category: 'Dessert', price: 60, description: 'Sweet milk solids in syrup.' },
-            { name: 'Rasmalai', category: 'Dessert', price: 80, description: 'Cottage cheese balls in thickened milk.' },
-            { name: 'Gajar Ka Halwa', category: 'Dessert', price: 90, description: 'Carrot pudding.' },
-            { name: 'Ice Cream (Vanilla)', category: 'Dessert', price: 50, description: 'Classic vanilla scoop.' },
+            { name: 'Gulab Jamun', category: 'Dessert', price: 60, description: 'Sweet milk solids in sugar syrup.', unit: 'per plate (4 pcs)' },
+            { name: 'Rasmalai', category: 'Dessert', price: 80, description: 'Cottage cheese balls in thickened milk.', unit: 'per plate (2 pcs)' },
+            { name: 'Gajar Ka Halwa', category: 'Dessert', price: 90, description: 'Warm carrot pudding with nuts.', unit: 'per bowl (150g)' },
+            { name: 'Ice Cream', category: 'Dessert', price: 50, description: 'Classic scoop - Vanilla/Chocolate.', unit: 'per scoop' },
+            { name: 'Kulfi', category: 'Dessert', price: 60, description: 'Traditional Indian frozen dessert.', unit: 'per piece' },
+            { name: 'Jalebi', category: 'Dessert', price: 70, description: 'Crispy sweet spirals in syrup.', unit: 'per plate (200g)' },
 
             // Beverages
-            { name: 'Masala Chai', category: 'Beverage', price: 30, description: 'Spiced Indian tea.' },
-            { name: 'Fresh Lime Soda', category: 'Beverage', price: 60, description: 'Refreshing lemon drink.' },
-            { name: 'Lassi', category: 'Beverage', price: 70, description: 'Sweet yogurt drink.' },
-            { name: 'Soft Drink', category: 'Beverage', price: 40, description: 'Coke/Pepsi/Sprite.' },
+            { name: 'Masala Chai', category: 'Beverage', price: 30, description: 'Spiced Indian tea.', unit: 'per glass' },
+            { name: 'Fresh Lime Soda', category: 'Beverage', price: 60, description: 'Refreshing lemon drink.', unit: 'per glass' },
+            { name: 'Lassi', category: 'Beverage', price: 70, description: 'Sweet yogurt drink.', unit: 'per glass (300ml)' },
+            { name: 'Buttermilk', category: 'Beverage', price: 30, description: 'Spiced chilled buttermilk.', unit: 'per glass (300ml)' },
+            { name: 'Mango Lassi', category: 'Beverage', price: 80, description: 'Sweet mango yogurt drink.', unit: 'per glass (300ml)' },
         ];
 
         await EventItem.insertMany(eventItems);
-        console.log('Event Items Imported!');
+        console.log(`${eventItems.length} Event Items Imported!`);
 
         process.exit();
     } catch (error) {

@@ -54,18 +54,23 @@ const MySubscription = () => {
 
     const fetchSubscriptionData = async (hideNotFoundToast = false) => {
         setLoading(true);
-        try {
-            const config = {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-            };
+        const config = {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        };
 
-            // Fetch current subscription
+        try {
+            // Fetch current subscription independently
             const subRes = await api.get('/api/subscriptions/me', config);
             setSubscription(subRes.data);
 
-            // Fetch available upgrades
-            const upgradeRes = await api.get('/api/subscriptions/available-upgrades', config);
-            setAvailableUpgrades(upgradeRes.data.availableUpgrades || []);
+            // Fetch available upgrades cleanly inside its own block
+            try {
+                const upgradeRes = await api.get('/api/subscriptions/available-upgrades', config);
+                setAvailableUpgrades(upgradeRes.data.availableUpgrades || []);
+            } catch (upgradeErr) {
+                console.error('Error fetching available upgrades:', upgradeErr);
+                setAvailableUpgrades([]);
+            }
 
         } catch (error) {
             if (error.response?.status === 404) {
@@ -75,6 +80,7 @@ const MySubscription = () => {
                 }
             } else {
                 console.error('Error fetching subscription:', error);
+                setSubscription(null); // Ensure state isn't partial if failed
                 showNotification('Failed to load subscription data', 'error');
             }
         } finally {

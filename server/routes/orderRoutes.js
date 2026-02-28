@@ -10,6 +10,7 @@ const {
     verifyPayment,
     cancelOrder,
     getMyOrderStats,
+    addReview,
 } = require('../controllers/orderController');
 const { protect, admin, employee } = require('../middleware/authMiddleware');
 
@@ -24,5 +25,6 @@ router.route('/verify').post(protect, verifyPayment);
 router.route('/:id').get(protect, getOrderById);
 router.route('/:id/status').put(protect, employee, updateOrderStatus);
 router.route('/:id/cancel').put(protect, cancelOrder);
+router.route('/:id/review').put(protect, addReview);
 
 module.exports = router;

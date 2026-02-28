@@ -27,6 +27,11 @@ const orderSchema = mongoose.Schema({
     cancellationFee: { type: Number, default: 0 },
     refundAmount: { type: Number, default: 0 },
     couponCode: { type: String },
+    review: {
+        rating: { type: Number, min: 1, max: 5 },
+        comment: { type: String, maxlength: 500 },
+        createdAt: { type: Date }
+    },
 }, { timestamps: true });
 
 // Indexes for faster queries

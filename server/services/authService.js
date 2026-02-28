@@ -3,11 +3,51 @@ const { generateToken } = require('../utils/jwtUtils');
 
 /**
  * Service: All business logic for Authentication.
+ * OTP stored in-memory Map — auto-expires after 5 min via setTimeout.
  */
 
-const registerUser = async ({ name, email, password, role }) => {
-    if (!name || !email || !password) {
-        return { success: false, status: 400, message: 'Please add all fields' };
+// In-memory OTP store: phone -> { otp, timer }
+const otpStore = new Map();
+
+const sendOtp = async ({ phone }) => {
+    if (!phone || phone.toString().length !== 10) {
+        return { success: false, status: 400, message: 'Please provide a valid 10-digit phone number' };
+    }
+
+    const phoneStr = phone.toString();
+
+    // Generate 6-digit OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Clear any existing timer for this phone
+    if (otpStore.has(phoneStr)) {
+        clearTimeout(otpStore.get(phoneStr).timer);
+    }
+
+    // Store OTP with 5-minute auto-expiry
+    const timer = setTimeout(() => otpStore.delete(phoneStr), 5 * 60 * 1000);
+    otpStore.set(phoneStr, { otp: otpCode, timer });
+
+    // Simulate sending OTP (in production, integrate Twilio/Fast2SMS here)
+    console.log(`[SIMULATED SMS] OTP sent to ${phone}: ${otpCode}`);
+
+    return { success: true, status: 200, message: 'OTP sent successfully' };
+};
+
+const registerUser = async ({ name, email, password, role, phone, otp }) => {
+    if (!name || !email || !password || !phone || !otp) {
+        return { success: false, status: 400, message: 'Please add all fields including phone and OTP' };
+    }
+
+    const phoneStr = phone.toString();
+    if (phoneStr.length !== 10) {
+        return { success: false, status: 400, message: 'Phone number must be 10 digits' };
+    }
+
+    // Verify OTP from in-memory store
+    const stored = otpStore.get(phoneStr);
+    if (!stored || stored.otp !== otp) {
+        return { success: false, status: 400, message: 'Invalid or expired OTP' };
     }
 
     const userExists = await userRepo.findByEmail(email);
@@ -15,11 +55,15 @@ const registerUser = async ({ name, email, password, role }) => {
         return { success: false, status: 400, message: 'User already exists' };
     }
 
-    const user = await userRepo.create({ name, email, password, role: role || 'user' });
+    const user = await userRepo.create({ name, email, password, role: role || 'user', phone });
     if (user) {
+        // Clear OTP after successful registration
+        clearTimeout(stored.timer);
+        otpStore.delete(phoneStr);
+
         return {
             success: true, status: 201,
-            data: { _id: user.id, name: user.name, email: user.email, role: user.role, token: generateToken(user._id) }
+            data: { _id: user.id, name: user.name, email: user.email, role: user.role, phone: user.phone, token: generateToken(user._id) }
         };
     }
     return { success: false, status: 400, message: 'Invalid user data' };
@@ -70,6 +114,7 @@ const updateUserProfile = async (userId, updates) => {
 };
 
 module.exports = {
+    sendOtp,
     registerUser,
     loginUser,
     updateUserProfile

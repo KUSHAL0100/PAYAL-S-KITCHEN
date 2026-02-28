@@ -65,25 +65,42 @@ export const CartProvider = ({ children }) => {
         setCartItems((prevItems) => prevItems.filter((item) => item.id !== id));
     };
 
-    const updateQuantity = (id, quantity) => {
-        if (quantity < 1) return { success: true };
-        if (quantity > 19) {
-            return { success: false, message: 'Maximum 19 persons allowed per order slot.' };
-        }
+    const updateQuantity = (id, newQty) => {
+        let result = { success: true };
+
         setCartItems((prevItems) =>
             prevItems.map((item) => {
                 if (item.id === id) {
-                    const price = item.price || 0;
-                    return {
-                        ...item,
-                        quantity,
-                        totalAmount: price * quantity
-                    };
+                    if (item.type === 'event') {
+                        if (newQty < 20) return item; // Minimum 20 for events
+                        if (newQty > 50) {
+                            result = { success: false, message: 'Maximum 50 guests allowed for event catering.' };
+                            return item;
+                        }
+                        const price = item.pricePerPlate || 0;
+                        return {
+                            ...item,
+                            guestCount: newQty,
+                            totalAmount: price * newQty
+                        };
+                    } else {
+                        if (newQty < 1) return item;
+                        if (newQty > 19) {
+                            result = { success: false, message: 'Maximum 19 persons allowed per order slot.' };
+                            return item;
+                        }
+                        const price = item.price || 0;
+                        return {
+                            ...item,
+                            quantity: newQty,
+                            totalAmount: price * newQty
+                        };
+                    }
                 }
                 return item;
             })
         );
-        return { success: true };
+        return result;
     };
 
     const clearCart = () => {

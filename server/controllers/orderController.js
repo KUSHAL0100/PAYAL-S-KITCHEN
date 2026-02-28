@@ -143,6 +143,49 @@ const cancelOrder = async (req, res) => {
     }
 };
 
+// @desc    Add review to order
+// @route   PUT /api/orders/:id/review
+// @access  Private
+const addReview = async (req, res) => {
+    try {
+        const order = await orderRepo.findByIdWithUser(req.params.id);
+        if (!order) return res.status(404).json({ message: 'Order not found' });
+
+        // Only owner can review
+        if (order.user._id.toString() !== req.user._id.toString()) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        // Only single/event orders
+        if (!['single', 'event'].includes(order.type)) {
+            return res.status(400).json({ message: 'Reviews only for custom/event orders' });
+        }
+
+        // Only confirmed orders
+        if (order.status !== 'Confirmed') {
+            return res.status(400).json({ message: 'Can only review confirmed orders' });
+        }
+
+        // Already reviewed?
+        if (order.review && order.review.rating) {
+            return res.status(400).json({ message: 'Already reviewed' });
+        }
+
+        const { rating, comment } = req.body;
+        if (!rating || rating < 1 || rating > 5) {
+            return res.status(400).json({ message: 'Rating must be 1-5' });
+        }
+
+        order.review = { rating, comment: comment || '', createdAt: new Date() };
+        await order.save();
+
+        res.json({ message: 'Review added', order });
+    } catch (error) {
+        console.error('Error adding review:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
 module.exports = {
     createOrder,
     getMyOrders,
@@ -153,4 +196,5 @@ module.exports = {
     verifyPayment,
     cancelOrder,
     getMyOrderStats,
+    addReview,
 };

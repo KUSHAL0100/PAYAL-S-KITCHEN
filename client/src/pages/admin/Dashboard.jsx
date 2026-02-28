@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext, useMemo } from 'react';
 import api from '../../lib/api';
-import { Plus, Trash2, Edit2, Check, X, Package, Calendar, Clock, MessageSquare, Filter, Tag, Users, LayoutDashboard, TrendingUp, AlertCircle, CreditCard, Utensils, RefreshCw, ChevronRight, Activity, PieChart } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, Package, Calendar, Clock, MessageSquare, Filter, Tag, Users, LayoutDashboard, TrendingUp, AlertCircle, CreditCard, Utensils, RefreshCw, ChevronRight, Activity, PieChart, Star } from 'lucide-react';
 import AuthContext from '../../context/AuthContext';
 import NotificationContext from '../../context/NotificationContext';
 import DeliveryScheduleTab from './DeliveryScheduleTab';
@@ -838,6 +838,23 @@ const AdminDashboard = () => {
                                                             <strong>Delivery Address:</strong> {order.deliveryAddress.street}, {order.deliveryAddress.city}, {order.deliveryAddress.zip}
                                                             {order.deliveryAddress.label && <span className="ml-2 text-xs bg-gray-200 px-1 rounded">{order.deliveryAddress.label}</span>}
                                                         </p>
+                                                    )}
+                                                    {/* Customer Review */}
+                                                    {order.review && order.review.rating && (
+                                                        <div className="mt-2 p-2 bg-amber-50 rounded-lg border border-amber-100">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Review</span>
+                                                                <div className="flex items-center gap-0.5">
+                                                                    {[1, 2, 3, 4, 5].map(s => (
+                                                                        <Star key={s} className={`h-3 w-3 ${s <= order.review.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`} />
+                                                                    ))}
+                                                                </div>
+                                                                <span className="text-[10px] font-bold text-gray-400">
+                                                                    {order.review.createdAt ? new Date(order.review.createdAt).toLocaleDateString() : ''}
+                                                                </span>
+                                                            </div>
+                                                            {order.review.comment && <p className="text-xs text-gray-600 italic mt-1">"{order.review.comment}"</p>}
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>

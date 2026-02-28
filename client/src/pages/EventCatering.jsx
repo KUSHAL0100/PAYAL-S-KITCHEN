@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import api from '../lib/api';
-import { ShoppingCart, Check } from 'lucide-react';
+import { ShoppingCart, Plus, Minus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import CartContext from '../context/CartContext';
@@ -9,6 +9,7 @@ import NotificationContext from '../context/NotificationContext';
 const EventCatering = () => {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
+    // selectedItems now stores { ...itemData, quantity: N }
     const [selectedItems, setSelectedItems] = useState([]);
     const [guestCount, setGuestCount] = useState(20);
     const navigate = useNavigate();
@@ -31,16 +32,31 @@ const EventCatering = () => {
         fetchItems();
     }, []);
 
+    const getSelectedItem = (itemId) => selectedItems.find(i => i._id === itemId);
+    const isSelected = (itemId) => !!getSelectedItem(itemId);
+
     const handleToggleItem = (item) => {
-        if (selectedItems.find(i => i._id === item._id)) {
+        if (isSelected(item._id)) {
+            // Remove
             setSelectedItems(selectedItems.filter(i => i._id !== item._id));
         } else {
-            setSelectedItems([...selectedItems, item]);
+            // Add with quantity 1
+            setSelectedItems([...selectedItems, { ...item, quantity: 1 }]);
         }
     };
 
+    const handleQuantityChange = (itemId, delta, e) => {
+        e.stopPropagation(); // Prevent card toggle
+        setSelectedItems(prev =>
+            prev
+                .map(i => i._id === itemId ? { ...i, quantity: i.quantity + delta } : i)
+                .filter(i => i.quantity > 0) // Remove if quantity reaches 0
+        );
+    };
+
+    // Price per plate now considers quantity
     const calculateTotalPerPlate = () => {
-        return selectedItems.reduce((total, item) => total + item.price, 0);
+        return selectedItems.reduce((total, item) => total + (item.price * item.quantity), 0);
     };
 
     const calculateGrandTotal = () => {
@@ -85,17 +101,16 @@ const EventCatering = () => {
         }
 
         const eventOrder = {
-            id: `event_${Date.now()}`, // Unique ID for cart operations
+            id: `event_${Date.now()}`,
             type: 'event',
-            items: selectedItems,
+            items: selectedItems, // Now includes quantity per item
             guestCount: parseInt(guestCount),
             pricePerPlate: calculateTotalPerPlate(),
             totalAmount: calculateGrandTotal(),
-            deliveryDate: eventDate, // Pass selected date
-            deliveryTime: eventTime   // Pass selected time
+            deliveryDate: eventDate,
+            deliveryTime: eventTime
         };
 
-        // Add to cart via Context
         addToCart(eventOrder);
 
         showNotification('Event order added to cart!', 'success');
@@ -126,25 +141,59 @@ const EventCatering = () => {
                                 <div className="bg-orange-600 px-6 py-4">
                                     <h3 className="text-lg font-bold text-white">{category}</h3>
                                 </div>
-                                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {groupedItems[category].map(item => (
-                                        <div
-                                            key={item._id}
-                                            onClick={() => handleToggleItem(item)}
-                                            className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedItems.find(i => i._id === item._id)
-                                                ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-500'
-                                                : 'border-gray-200 hover:border-orange-300'
-                                                }`}
-                                        >
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <h4 className="font-medium text-gray-900">{item.name}</h4>
-                                                    <p className="text-sm text-gray-500 mt-1">{item.description}</p>
+                                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                                    {groupedItems[category].map(item => {
+                                        const selected = getSelectedItem(item._id);
+                                        return (
+                                            <div
+                                                key={item._id}
+                                                onClick={() => !selected && handleToggleItem(item)}
+                                                className={`border rounded-lg p-4 transition-all ${selected
+                                                    ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-500'
+                                                    : 'border-gray-200 hover:border-orange-300 cursor-pointer'
+                                                    }`}
+                                            >
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="font-medium text-gray-900">{item.name}</h4>
+                                                        <p className="text-sm text-gray-500 mt-1">{item.description}</p>
+                                                    </div>
+                                                    <div className="text-right shrink-0 ml-3">
+                                                        <span className="font-semibold text-gray-900">₹{item.price}</span>
+                                                        {item.unit && (
+                                                            <p className="text-xs text-gray-400 mt-0.5">{item.unit}</p>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <span className="font-semibold text-gray-900">₹{item.price}</span>
+                                                {/* Quantity controls — shown only when selected */}
+                                                {selected && (
+                                                    <div className="mt-3 flex items-center justify-between border-t border-orange-200 pt-3">
+                                                        <span className="text-xs font-medium text-gray-500">Qty per guest</span>
+                                                        <div className="flex items-center space-x-3">
+                                                            <button
+                                                                onClick={(e) => handleQuantityChange(item._id, -1, e)}
+                                                                className="w-7 h-7 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center hover:bg-orange-200 transition-colors"
+                                                            >
+                                                                <Minus className="h-3.5 w-3.5" />
+                                                            </button>
+                                                            <span className="text-sm font-bold text-gray-900 w-6 text-center">
+                                                                {selected.quantity}
+                                                            </span>
+                                                            <button
+                                                                onClick={(e) => handleQuantityChange(item._id, 1, e)}
+                                                                className="w-7 h-7 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center hover:bg-orange-200 transition-colors"
+                                                            >
+                                                                <Plus className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        </div>
+                                                        <span className="text-xs font-semibold text-orange-600">
+                                                            ₹{item.price * selected.quantity}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         ))}
@@ -190,6 +239,18 @@ const EventCatering = () => {
                                     className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
                                 />
                             </div>
+
+                            {/* Selected items breakdown */}
+                            {selectedItems.length > 0 && (
+                                <div className="border-t border-gray-200 pt-4 mb-4 space-y-2 max-h-40 overflow-y-auto">
+                                    {selectedItems.map(item => (
+                                        <div key={item._id} className="flex justify-between text-xs text-gray-600">
+                                            <span>{item.name} × {item.quantity}</span>
+                                            <span className="font-medium">₹{item.price * item.quantity}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             <div className="space-y-3 border-t border-gray-200 pt-4">
                                 <div className="flex justify-between text-sm">

@@ -182,7 +182,7 @@ const Cart = () => {
                             return {
                                 name: 'Event Catering',
                                 quantity: item.guestCount,
-                                selectedItems: { name: item.items.map(i => i.name).join(', ') },
+                                selectedItems: { name: item.items.map(i => `${i.name} ×${i.quantity}`).join(', ') },
                                 deliveryDate: itemDeliveryDate,
                                 deliveryTime: item.deliveryTime || '12:00 PM'
                             };
@@ -190,7 +190,7 @@ const Cart = () => {
                             return {
                                 name: item.name,
                                 quantity: item.quantity,
-                                selectedItems: { name: (item.menuItems || []).join(', ') },
+                                selectedItems: { name: (item.menuItems || []).join(', '), planType: item.planType },
                                 deliveryDate: itemDeliveryDate,
                                 deliveryTime: item.mealTime === 'Lunch' ? '12:00 PM' : '8:00 PM'
                             };
@@ -266,6 +266,11 @@ const Cart = () => {
                                                     <div>
                                                         <h3 className="text-lg font-medium text-gray-900">Event Catering</h3>
                                                         <p className="text-sm text-gray-500">Guests: {item.guestCount}</p>
+                                                        {item.deliveryDate && (
+                                                            <p className="text-sm text-gray-500">
+                                                                Date: {new Date(item.deliveryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} | Time: {item.deliveryTime}
+                                                            </p>
+                                                        )}
                                                         <p className="text-sm text-gray-500">
                                                             Menu: {item.items.map(i => i.name).join(', ')}
                                                         </p>
@@ -275,7 +280,11 @@ const Cart = () => {
                                                     <div>
                                                         <h3 className="text-lg font-medium text-gray-900">{item.name}</h3>
                                                         <p className="text-sm text-gray-500">Plan: {item.planType} | Meal: {item.mealTime}</p>
-                                                        <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
+                                                        {item.deliveryDate && (
+                                                            <p className="text-sm text-gray-500">
+                                                                Date: {new Date(item.deliveryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} | Time: {item.mealTime === 'Lunch' ? '12:00 PM' : '8:00 PM'}
+                                                            </p>
+                                                        )}
                                                         <p className="text-sm text-gray-500">
                                                             Menu: {item.menuItems.join(', ')}
                                                         </p>
@@ -290,31 +299,44 @@ const Cart = () => {
                                             </div>
                                         </div>
 
-                                        {/* Quantity Controls (Only for non-event/non-single-tiffin items for now) */}
-                                        {item.type !== 'event' && item.type !== 'single_tiffin' && (
-                                            <div className="flex items-center space-x-4">
-                                                <div className="flex items-center border border-gray-300 rounded-md">
-                                                    <button
-                                                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                                        className="p-2 hover:bg-gray-100"
-                                                    >
-                                                        <Minus className="h-4 w-4" />
-                                                    </button>
-                                                    <span className="px-4 py-2 text-gray-900">{item.quantity}</span>
-                                                    <button
-                                                        onClick={() => {
-                                                            const result = updateQuantity(item.id, item.quantity + 1);
-                                                            if (result && !result.success) {
-                                                                showNotification(result.message, 'error');
-                                                            }
-                                                        }}
-                                                        className="p-2 hover:bg-gray-100"
-                                                    >
-                                                        <Plus className="h-4 w-4" />
-                                                    </button>
-                                                </div>
+                                        {/* Quantity Controls for tiffin and event items */}
+                                        <div className="flex items-center space-x-4">
+                                            <div className="flex items-center border border-gray-300 rounded-md">
+                                                <button
+                                                    onClick={() => {
+                                                        const currentQty = item.type === 'event' ? item.guestCount : item.quantity;
+                                                        if (currentQty <= 1) {
+                                                            removeFromCart(item.id);
+                                                        } else {
+                                                            updateQuantity(item.id, currentQty - 1);
+                                                        }
+                                                    }}
+                                                    className="p-2 hover:bg-gray-100"
+                                                >
+                                                    <Minus className="h-4 w-4" />
+                                                </button>
+                                                <span className="px-4 py-2 text-gray-900 font-medium">
+                                                    {item.type === 'event' ? item.guestCount : item.quantity}
+                                                </span>
+                                                <button
+                                                    onClick={() => {
+                                                        const currentQty = item.type === 'event' ? item.guestCount : item.quantity;
+                                                        // Prevent exceeding max guests if it's an event
+                                                        if (item.type === 'event' && currentQty >= 50) {
+                                                            showNotification('Guest count cannot exceed 50.', 'error');
+                                                            return;
+                                                        }
+                                                        const result = updateQuantity(item.id, currentQty + 1);
+                                                        if (result && !result.success) {
+                                                            showNotification(result.message, 'error');
+                                                        }
+                                                    }}
+                                                    className="p-2 hover:bg-gray-100"
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                </button>
                                             </div>
-                                        )}
+                                        </div>
 
                                         <button
                                             onClick={() => removeFromCart(item.id || index)}

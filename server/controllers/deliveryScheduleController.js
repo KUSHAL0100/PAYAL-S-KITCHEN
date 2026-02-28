@@ -157,11 +157,18 @@ const getDeliverySchedule = async (req, res) => {
 
             daysItems.forEach(item => {
                 // Determine which plan lane this item belongs to
-                let planType = order.type === 'event' ? 'Events' : (item.selectedItems?.planType || 'Basic');
-                if (planType === 'Basic') {
+                let planType;
+                if (order.type === 'event') {
+                    planType = 'Events';
+                } else if (item.selectedItems?.planType) {
+                    // Trust the explicitly stored planType from checkout
+                    planType = item.selectedItems.planType;
+                } else {
+                    // Fallback: detect from item name for older orders
                     const n = (item.name || '').toLowerCase();
                     if (n.includes('exotic')) planType = 'Exotic';
                     else if (n.includes('premium')) planType = 'Premium';
+                    else planType = 'Basic';
                 }
 
                 const itemNames = extractItemNames(item);

@@ -195,6 +195,12 @@ const getAvailableUpgrades = async (userId) => {
     }
 
     const currentPlan = subscription.plan;
+    
+    // Safety check: if plan went missing from db
+    if (!currentPlan || !currentPlan.name || !currentPlan.duration) {
+        return { success: true, data: { currentSubscription: subscription, availableUpgrades: [] } };
+    }
+
     const currentTier = TIER_MAP[currentPlan.name] || 0;
     const currentDuration = DURATION_MAP[currentPlan.duration] || 0;
 

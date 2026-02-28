@@ -1,9 +1,9 @@
-import React, { useEffect, useContext } from 'react';
-import { AlertCircle, Clock } from 'lucide-react';
+import React, { useEffect, useContext, useState } from 'react';
+import { AlertCircle, Clock, Star } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
-import { useMyOrders, useCancelOrder } from '../hooks/useOrders';
+import { useMyOrders, useCancelOrder, useAddReview } from '../hooks/useOrders';
 import { calculateCancellationFee, isOrderPastDelivery } from '../utils/orderUtils';
 
 const Orders = () => {
@@ -13,6 +13,10 @@ const Orders = () => {
 
     const { data: orders = [], isLoading: loading } = useMyOrders();
     const cancelOrderMutation = useCancelOrder();
+    const addReviewMutation = useAddReview();
+    const [reviewingOrderId, setReviewingOrderId] = useState(null);
+    const [reviewRating, setReviewRating] = useState(0);
+    const [reviewComment, setReviewComment] = useState('');
 
     useEffect(() => {
         // Load Razorpay script
@@ -263,6 +267,78 @@ const Orders = () => {
                                                         <span className="text-sm font-black text-teal-600">₹{order.refundAmount?.toFixed(2) || '0.00'}</span>
                                                     </div>
                                                 </div>
+                                            </div>
+                                        )}
+
+                                        {/* Review Section — only for delivered single/event orders */}
+                                        {['single', 'event'].includes(order.type) && order.status === 'Confirmed' && isOrderPastDelivery(order) && (
+                                            <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-100">
+                                                {order.review && order.review.rating ? (
+                                                    /* Show existing review */
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-2">Your Review</p>
+                                                        <div className="flex items-center gap-1 mb-1">
+                                                            {[1, 2, 3, 4, 5].map(s => (
+                                                                <Star key={s} className={`h-4 w-4 ${s <= order.review.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`} />
+                                                            ))}
+                                                            <span className="text-xs font-black text-gray-600 ml-2">{order.review.rating}/5</span>
+                                                        </div>
+                                                        {order.review.comment && <p className="text-sm text-gray-600 italic mt-1">"{order.review.comment}"</p>}
+                                                    </div>
+                                                ) : reviewingOrderId === order._id ? (
+                                                    /* Review Form */
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-3">Rate Your Experience</p>
+                                                        <div className="flex items-center gap-1 mb-3">
+                                                            {[1, 2, 3, 4, 5].map(s => (
+                                                                <button key={s} onClick={() => setReviewRating(s)} className="focus:outline-none transition-transform hover:scale-110">
+                                                                    <Star className={`h-7 w-7 ${s <= reviewRating ? 'text-amber-500 fill-amber-500' : 'text-gray-300 hover:text-amber-300'}`} />
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                        <textarea
+                                                            value={reviewComment}
+                                                            onChange={(e) => setReviewComment(e.target.value)}
+                                                            placeholder="Share your experience... (optional, max 500 chars)"
+                                                            maxLength={500}
+                                                            rows={2}
+                                                            className="w-full px-3 py-2 text-sm border border-amber-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white resize-none"
+                                                        />
+                                                        <div className="flex gap-2 mt-2">
+                                                            <button
+                                                                disabled={!reviewRating || addReviewMutation.isPending}
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await addReviewMutation.mutateAsync({ orderId: order._id, rating: reviewRating, comment: reviewComment });
+                                                                        showNotification('Review submitted!', 'success');
+                                                                        setReviewingOrderId(null);
+                                                                        setReviewRating(0);
+                                                                        setReviewComment('');
+                                                                    } catch (err) {
+                                                                        showNotification(err.response?.data?.message || 'Failed to submit review', 'error');
+                                                                    }
+                                                                }}
+                                                                className="px-4 py-1.5 bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-700 disabled:opacity-50 transition-all active:scale-95"
+                                                            >
+                                                                {addReviewMutation.isPending ? 'Submitting...' : 'Submit'}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => { setReviewingOrderId(null); setReviewRating(0); setReviewComment(''); }}
+                                                                className="px-4 py-1.5 bg-white border border-gray-200 text-gray-600 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-50 transition-all"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    /* Write Review Button */
+                                                    <button
+                                                        onClick={() => { setReviewingOrderId(order._id); setReviewRating(0); setReviewComment(''); }}
+                                                        className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-700 transition-all active:scale-95 shadow-sm"
+                                                    >
+                                                        <Star className="h-3.5 w-3.5" /> Write a Review
+                                                    </button>
+                                                )}
                                             </div>
                                         )}
                                     </div>

@@ -333,16 +333,16 @@ const Menu = () => {
                     })()}
 
                     <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                        <label className="block text-xs font-black text-gray-500 mb-3 uppercase tracking-widest">Number of Persons</label>
+                        <label className="block text-xs font-black text-gray-500 mb-3 uppercase tracking-widest">Number of Persons (max 19)</label>
                         <div className="grid grid-cols-5 gap-2">
-                            {Array.from({ length: 19 }, (_, i) => i + 1).map(num => (
+                            {Array.from({ length: 19 }, (_, i) => i + 1).map((num) => (
                                 <button
                                     key={num}
                                     type="button"
                                     onClick={() => setOrderQuantity(num)}
-                                    className={`py-2 rounded-lg text-sm font-black transition-all duration-200 ${orderQuantity === num
-                                        ? 'bg-orange-600 text-white shadow-md transform scale-105'
-                                        : 'bg-white text-gray-700 border border-gray-200 hover:border-orange-300 hover:bg-orange-50'
+                                    className={`h-10 w-full rounded-xl text-sm font-black flex justify-center items-center transition-all ${orderQuantity === num
+                                            ? 'bg-orange-600 text-white shadow-md'
+                                            : 'bg-white border-2 border-gray-100 text-gray-700 hover:border-orange-200 hover:bg-orange-50'
                                         }`}
                                 >
                                     {num}

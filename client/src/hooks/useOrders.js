@@ -53,3 +53,22 @@ export const useCancelOrder = () => {
         },
     });
 };
+
+/**
+ * Custom hook to add a review to an order.
+ */
+const addReviewFn = async ({ orderId, rating, comment }) => {
+    const { data } = await api.put(`/api/orders/${orderId}/review`, { rating, comment });
+    return data;
+};
+
+export const useAddReview = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: addReviewFn,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['myOrders'] });
+        },
+    });
+};
