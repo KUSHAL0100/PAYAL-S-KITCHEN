@@ -199,12 +199,32 @@ const seedData = async () => {
         console.log('Plans Imported!');
 
         // --- MENUS (Dec 1, 2025 → Sep 30, 2026) ---
-        // Weekly rotation: same Sun–Sat menu repeats every week.
+        // Monthly variation rotation:
+        // Weekdays (Mon-Fri) shift based on the month index to keep menus different across months.
+        // Weekends (Sat-Sun) swap on alternate months.
         const menus = [];
         const startDate = new Date('2025-12-01T00:00:00');
         const endDate = new Date('2026-09-30T23:59:59');
 
         let currentDate = new Date(startDate);
+
+        const getMenuForDay = (weeklyMenu, date) => {
+            const dayOfWeek = date.getDay(); // 0-6
+            const month = date.getMonth(); // 0-11
+
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+                // For weekends: Alternate between Saturday and Sunday menus every other month
+                if (month % 2 === 0) {
+                    return weeklyMenu[dayOfWeek];
+                } else {
+                    return weeklyMenu[dayOfWeek === 0 ? 6 : 0];
+                }
+            } else {
+                // For weekdays (1-5): Shift the menu index forward by the month number
+                const weekdayIndex = ((dayOfWeek - 1 + month) % 5) + 1;
+                return weeklyMenu[weekdayIndex];
+            }
+        };
 
         while (currentDate <= endDate) {
             const dayOfWeek = currentDate.getDay(); // 0=Sun, 6=Sat
@@ -214,7 +234,7 @@ const seedData = async () => {
             menus.push({
                 date: new Date(currentDate),
                 planType: 'Basic',
-                items: BASIC_WEEKLY[dayOfWeek],
+                items: getMenuForDay(BASIC_WEEKLY, currentDate),
                 isWeekendSpecial: false,
             });
 
@@ -222,7 +242,7 @@ const seedData = async () => {
             menus.push({
                 date: new Date(currentDate),
                 planType: 'Premium',
-                items: PREMIUM_WEEKLY[dayOfWeek],
+                items: getMenuForDay(PREMIUM_WEEKLY, currentDate),
                 isWeekendSpecial: isWeekend,
             });
 
@@ -230,7 +250,7 @@ const seedData = async () => {
             menus.push({
                 date: new Date(currentDate),
                 planType: 'Exotic',
-                items: EXOTIC_WEEKLY[dayOfWeek],
+                items: getMenuForDay(EXOTIC_WEEKLY, currentDate),
                 isWeekendSpecial: isWeekend,
             });
 
