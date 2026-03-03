@@ -39,10 +39,6 @@
   - Intelligent coupon system for discounts.
 - **Support Hub**: Integrated complaint and feedback system with real-time status tracking.
 
-### 🍱 Employee Portal
-- **Order Pipeline**: Efficient management of pending, confirmed, and delivered orders.
-- **Status Automation**: Quick updates for order logistics.
-- **Role-based Filters**: Filter tasks by date range and order type.
 
 ### 🛡️ Admin Suite
 - **Pulse Dashboard**: 
