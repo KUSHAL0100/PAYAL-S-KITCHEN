@@ -1,5 +1,6 @@
 const subscriptionService = require('../services/subscriptionService');
 const subscriptionRepo = require('../repositories/subscriptionRepository');
+const orderRepo = require('../repositories/orderRepository');
 const deliveryPauseRepo = require('../repositories/deliveryPauseRepository');
 
 /**
@@ -54,7 +55,17 @@ const cancelSubscription = async (req, res) => {
 const getMySubscription = async (req, res) => {
     try {
         const subscription = await subscriptionRepo.findActiveByUserIdLean(req.user._id);
-        if (subscription) res.json(subscription);
+        if (subscription) {
+            // Find latest order to get exact proRataCredit for receipts
+            // Explicitly finding by string ID to avoid any ObjectId mismatch in lean objects
+            const latestOrder = await orderRepo.findLatestBySubscription(subscription._id.toString());
+            if (latestOrder) {
+                subscription.proRataCredit = Number(latestOrder.proRataCredit || 0);
+            } else {
+                subscription.proRataCredit = 0;
+            }
+            res.json(subscription);
+        }
         else res.status(404).json({ message: 'No active subscription found' });
     } catch (error) {
         console.error('Error in getMySubscription:', error);

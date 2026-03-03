@@ -147,7 +147,7 @@ const Orders = () => {
                                         </span>
 
                                         <button
-                                            onClick={() => downloadInvoicePdf(order, `Invoice_Order_${order._id.slice(-6).toUpperCase()}`)}
+                                            onClick={() => downloadInvoicePdf({ ...order, customerName: user?.name }, `Invoice_Order_${order._id.slice(-6).toUpperCase()}`)}
                                             className="group flex items-center gap-2 px-5 py-2 bg-white border-2 border-orange-100 text-orange-600 rounded-2xl text-[10px] font-black uppercase tracking-[0.1em] hover:bg-orange-600 hover:text-white hover:border-orange-600 transition-all duration-300 shadow-xl shadow-orange-100/30 active:scale-95"
                                         >
                                             <FileText className="w-4 h-4 transition-transform group-hover:-rotate-12" />
@@ -226,6 +226,9 @@ const Orders = () => {
                                                     )}
                                                     {/* Calculate and display delivery fee if applicable */}
                                                     {(() => {
+                                                        const isMealOrder = order.type === 'single' || order.type === 'event';
+                                                        if (!isMealOrder) return null;
+
                                                         const subtotal = order.price || 0;
                                                         const discount = order.discountAmount || 0;
                                                         const credit = order.proRataCredit || 0;

@@ -119,7 +119,7 @@ export const downloadInvoicePdf = (data, filename) => {
             doc.text(data.plan?.name || 'N/A', L + 2, y + 5.5);
             doc.text(data.plan?.duration || 'N/A', L + 55, y + 5.5);
             doc.text(data.mealType === 'both' ? 'Lunch + Dinner' : data.mealType === 'lunch' ? 'Lunch Only' : 'Dinner Only', L + 100, y + 5.5);
-            doc.text(`Rs.${(data.amountPaid || data.planValue || 0).toFixed(2)}`, R - 2, y + 5.5, { align: 'right' });
+            doc.text(`Rs.${(data.planValue || data.amountPaid || 0).toFixed(2)}`, R - 2, y + 5.5, { align: 'right' });
             y += 8;
             doc.setDrawColor(230).line(L, y, R, y);
             y += 6;
@@ -130,36 +130,54 @@ export const downloadInvoicePdf = (data, filename) => {
         const tX = R - 70;
         doc.setFontSize(9);
 
-        const total = isSub ? (data.amountPaid || data.planValue || 0) : (data.totalAmount || 0);
-        const subtotal = data.price || total;
+        const total = isSub ? (data.amountPaid ?? data.planValue ?? 0) : (data.totalAmount ?? 0);
+        const subtotal = (isSub ? (data.planValue ?? total) : (data.price ?? total));
 
-        const addLine = (label, val, color) => {
-            doc.setFont('helvetica', 'normal').setTextColor(...(color || [100, 100, 100]));
+        const addLine = (label, val, color, isBold = false) => {
+            doc.setFont('helvetica', isBold ? 'bold' : 'normal').setTextColor(...(color || [100, 100, 100]));
+            if (isBold) doc.setFontSize(10); else doc.setFontSize(9);
             doc.text(label, tX, y);
             doc.setTextColor(30, 30, 30);
             doc.text(val, R, y, { align: 'right' });
-            y += 6;
+            y += 7;
         };
 
         if (isSub) {
-            addLine('Plan Value', `Rs.${(data.planValue || 0).toFixed(2)}`);
-            if ((data.planValue || 0) !== (data.amountPaid || 0) && (data.amountPaid || 0) > 0) {
-                addLine('Amount Paid', `Rs.${data.amountPaid.toFixed(2)}`);
+            const pVal = data.planValue ?? 0;
+            const aPaid = data.amountPaid ?? 0;
+            // Use the proRataCredit field provided by the server, fallback to derived
+            const credit = data.proRataCredit ?? Math.max(0, pVal - aPaid);
+            const finalPaid = Math.max(0, pVal - credit);
+
+            addLine('Plan Value', `Rs.${pVal.toFixed(2)}`);
+            if (credit > 0.1) {
+                addLine('Pro-rata Credit', `-Rs.${credit.toFixed(2)}`, [16, 185, 129]);
             }
+            doc.setDrawColor(200).line(tX, y - 2, R, y - 2); y += 2;
+            addLine('Total Paid', `Rs.${finalPaid.toFixed(2)}`, [30, 30, 30], true);
         } else {
             addLine('Subtotal', `Rs.${subtotal.toFixed(2)}`);
-            if ((data.discountAmount || 0) > 0) addLine('Discount', `-Rs.${data.discountAmount.toFixed(2)}`, [234, 88, 12]);
-            if ((data.proRataCredit || 0) > 0) addLine('Upgrade Credit', `-Rs.${data.proRataCredit.toFixed(2)}`, [16, 185, 129]);
-            if ((data.cancellationFee || 0) > 0) addLine('Cancel Fee', `Rs.${data.cancellationFee.toFixed(2)}`, [220, 38, 38]);
-            if ((data.refundAmount || 0) > 0) addLine('Refund', `Rs.${data.refundAmount.toFixed(2)}`, [16, 185, 129]);
-        }
+            if ((data.discountAmount ?? 0) > 0) addLine('Discount', `-Rs.${data.discountAmount.toFixed(2)}`, [234, 88, 12]);
+            if ((data.proRataCredit ?? 0) > 0) addLine('Upgrade Credit', `-Rs.${data.proRataCredit.toFixed(2)}`, [16, 185, 129]);
 
-        doc.setDrawColor(200).line(tX, y, R, y);
-        y += 7;
-        doc.setFontSize(12).setFont('helvetica', 'bold').setTextColor(30, 30, 30);
-        doc.text('Total Paid', tX, y);
-        doc.setTextColor(234, 88, 12);
-        doc.text(`Rs.${total.toFixed(2)}`, R, y, { align: 'right' });
+            const isMealOrder = data.type === 'single' || data.type === 'event';
+            const calculatedTotal = subtotal - (data.discountAmount || 0) - (data.proRataCredit || 0);
+            const deliveryFee = total - calculatedTotal;
+            if (isMealOrder && deliveryFee > 1) addLine('Delivery Fee', `+Rs.${deliveryFee.toFixed(2)}`);
+
+            doc.setDrawColor(200).line(tX, y - 2, R, y - 2); y += 2;
+            addLine('Total Paid', `Rs.${total.toFixed(2)}`, [30, 30, 30], true);
+
+            if ((data.status === 'Cancelled' || data.status === 'Rejected' || (data.refundAmount || 0) > 0)) {
+                y += 2;
+                if ((data.cancellationFee || 0) > 0) {
+                    addLine('Cancellation Fee', `Rs.${data.cancellationFee.toFixed(2)}`, [220, 38, 38]);
+                }
+                if ((data.refundAmount || 0) > 0) {
+                    addLine('Refund Issued', `Rs.${data.refundAmount.toFixed(2)}`, [16, 185, 129]);
+                }
+            }
+        }
 
         // Transaction ID
         if (data.paymentId) {

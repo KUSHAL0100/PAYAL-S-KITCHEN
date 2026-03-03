@@ -418,7 +418,7 @@ const MySubscription = () => {
                                 <div className="flex flex-wrap gap-3">
 
                                     <button
-                                        onClick={() => downloadInvoicePdf(subscription, `Invoice_Sub_${subscription._id.slice(-6).toUpperCase()}`)}
+                                        onClick={() => downloadInvoicePdf({ ...subscription, customerName: user?.name }, `Invoice_Sub_${subscription._id.slice(-6).toUpperCase()}`)}
                                         className="group flex items-center gap-2 px-6 py-3 bg-white border-2 border-blue-100 text-blue-600 rounded-2xl text-[11px] font-black uppercase tracking-[0.1em] hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all duration-300 shadow-xl shadow-blue-100/30 active:scale-95"
                                     >
                                         <FileText className="h-4 w-4 transition-transform group-hover:rotate-12" />
