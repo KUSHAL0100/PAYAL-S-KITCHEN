@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import {
     TrendingUp, Users, Package, CreditCard, Activity,
-    ArrowUpRight, ArrowDownRight, Printer, Download, CalendarDays,
+    Printer, Download, CalendarDays,
     FileText, ClipboardList, UserCheck, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -615,10 +615,10 @@ const ReportsTab = () => {
 
     const { stats, revenueTrends = [], distribution = [] } = data;
     const kpiData = [
-        { label: 'Total Revenue', value: `₹${stats.totalRevenue || 0}`, icon: TrendingUp, bg: 'bg-emerald-500/10', text: 'text-emerald-600', trend: '+12.5%' },
-        { label: 'Total Orders', value: stats.totalOrders || 0, icon: Package, bg: 'bg-indigo-500/10', text: 'text-indigo-600', trend: '+5.2%' },
-        { label: 'Active Users', value: stats.totalUsers || 0, icon: Users, bg: 'bg-violet-500/10', text: 'text-violet-600', trend: '+8.1%' },
-        { label: 'Subscriptions', value: stats.activeSubscriptions || 0, icon: CreditCard, bg: 'bg-orange-500/10', text: 'text-orange-600', trend: '+15.3%' },
+        { label: 'Total Revenue', value: `₹${stats.totalRevenue || 0}`, icon: TrendingUp, bg: 'bg-emerald-500/10', text: 'text-emerald-600' },
+        { label: 'Total Orders', value: stats.totalOrders || 0, icon: Package, bg: 'bg-indigo-500/10', text: 'text-indigo-600' },
+        { label: 'Active Users', value: stats.totalUsers || 0, icon: Users, bg: 'bg-violet-500/10', text: 'text-violet-600' },
+        { label: 'Subscriptions', value: stats.activeSubscriptions || 0, icon: CreditCard, bg: 'bg-orange-500/10', text: 'text-orange-600' },
     ];
 
     return (
@@ -643,9 +643,6 @@ const ReportsTab = () => {
                         <div className="flex items-start justify-between">
                             <div className={`p-4 rounded-2xl ${kpi.bg} ${kpi.text} group-hover:scale-110 transition-transform duration-300 backdrop-blur-sm`}>
                                 <kpi.icon className="h-7 w-7" />
-                            </div>
-                            <div className={`flex items-center gap-1 text-[10px] font-black ${kpi.trend.startsWith('+') ? 'text-emerald-500 bg-emerald-50' : 'text-rose-500 bg-rose-50'} px-3 py-1.5 rounded-full border border-white/50 shadow-sm`}>
-                                {kpi.trend.startsWith('+') ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />} {kpi.trend}
                             </div>
                         </div>
                         <div className="mt-8">
