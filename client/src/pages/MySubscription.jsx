@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import api from '../lib/api';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Calendar, AlertCircle, TrendingUp, X, Info, CheckCircle, ClipboardList, Clock } from 'lucide-react';
+import { Calendar, AlertCircle, TrendingUp, X, Info, CheckCircle, ClipboardList, Clock, FileText } from 'lucide-react';
 
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
@@ -13,6 +13,7 @@ import SubscriptionPrice from '../components/SubscriptionPrice';
 import PauseDeliveryModal from '../components/PauseDeliveryModal';
 import PauseHistory from '../components/PauseHistory';
 import useRazorpay from '../hooks/useRazorpay';
+import { downloadInvoicePdf } from '../utils/invoiceGenerator';
 
 
 const MySubscription = () => {
@@ -415,6 +416,14 @@ const MySubscription = () => {
                                 {/* Meal Options Management Disabled */}
 
                                 <div className="flex flex-wrap gap-3">
+
+                                    <button
+                                        onClick={() => downloadInvoicePdf(subscription, `Invoice_Sub_${subscription._id.slice(-6).toUpperCase()}`)}
+                                        className="group flex items-center gap-2 px-6 py-3 bg-white border-2 border-blue-100 text-blue-600 rounded-2xl text-[11px] font-black uppercase tracking-[0.1em] hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all duration-300 shadow-xl shadow-blue-100/30 active:scale-95"
+                                    >
+                                        <FileText className="h-4 w-4 transition-transform group-hover:rotate-12" />
+                                        Download Receipt
+                                    </button>
 
                                     <button
                                         onClick={() => navigate('/orders')}

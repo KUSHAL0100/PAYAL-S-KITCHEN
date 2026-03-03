@@ -1,10 +1,11 @@
 import React, { useEffect, useContext, useState } from 'react';
-import { AlertCircle, Clock, Star } from 'lucide-react';
+import { AlertCircle, Clock, Star, FileText } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import NotificationContext from '../context/NotificationContext';
 import { useMyOrders, useCancelOrder, useAddReview } from '../hooks/useOrders';
 import { calculateCancellationFee, isOrderPastDelivery } from '../utils/orderUtils';
+import { downloadInvoicePdf } from '../utils/invoiceGenerator';
 
 const Orders = () => {
     const { user } = useContext(AuthContext);
@@ -144,6 +145,14 @@ const Orders = () => {
                                             }`}>
                                             {(order.status === 'Confirmed' && isOrderPastDelivery(order)) ? 'Delivered' : order.status}
                                         </span>
+
+                                        <button
+                                            onClick={() => downloadInvoicePdf(order, `Invoice_Order_${order._id.slice(-6).toUpperCase()}`)}
+                                            className="group flex items-center gap-2 px-5 py-2 bg-white border-2 border-orange-100 text-orange-600 rounded-2xl text-[10px] font-black uppercase tracking-[0.1em] hover:bg-orange-600 hover:text-white hover:border-orange-600 transition-all duration-300 shadow-xl shadow-orange-100/30 active:scale-95"
+                                        >
+                                            <FileText className="w-4 h-4 transition-transform group-hover:-rotate-12" />
+                                            Receipt
+                                        </button>
 
                                         {/* Show Cancel button for all except Cancelled and Upgraded orders */}
                                         {order.status !== 'Cancelled' &&

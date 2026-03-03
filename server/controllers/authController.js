@@ -5,15 +5,6 @@ const authService = require('../services/authService');
  * All business logic is in authService.
  */
 
-// @desc    Send OTP to phone
-// @route   POST /api/auth/send-otp
-// @access  Public
-const sendOtp = async (req, res) => {
-    const result = await authService.sendOtp(req.body);
-    if (!result.success) return res.status(result.status).json({ message: result.message });
-    res.status(result.status).json(result.data || { message: result.message });
-};
-
 // @desc    Register new user
 // @route   POST /api/auth/register
 // @access  Public
@@ -49,7 +40,6 @@ const updateUserProfile = async (req, res) => {
 };
 
 module.exports = {
-    sendOtp,
     registerUser,
     loginUser,
     getMe,
