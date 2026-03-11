@@ -154,7 +154,7 @@ export const calculateCancellationFee = (order) => {
  * @returns {Object} - { canUpgrade: boolean, reason: string }
  */
 export const canUpgradeToPlan = (currentSubscription, newPlan, newMealType = 'both') => {
-    if (!currentSubscription) {
+    if (!currentSubscription || !currentSubscription.plan) {
         return { canUpgrade: true, reason: '' };
     }
 

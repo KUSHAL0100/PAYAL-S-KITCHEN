@@ -241,7 +241,7 @@ const Plans = () => {
         .sort((a, b) => a.price - b.price) : [];
 
     const PlanCard = ({ plan }) => {
-        const isCurrent = currentSubscription && currentSubscription.plan && currentSubscription.plan._id === plan._id;
+        const isCurrent = currentSubscription?.plan?._id === plan._id;
         const isSelected = selectedPlan && selectedPlan._id === plan._id;
 
         return (
