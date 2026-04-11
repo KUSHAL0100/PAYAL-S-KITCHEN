@@ -8,7 +8,10 @@ const Navbar = () => {
     const { user, logout } = useContext(AuthContext);
     const { cartItems } = useContext(CartContext);
 
-    const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+    const cartCount = cartItems.reduce((total, item) => {
+        const qty = (item.type === 'event' || item.type === 'single_tiffin') ? 1 : (Number(item.quantity) || 1);
+        return total + qty;
+    }, 0);
 
     return (
         <nav className="sticky top-0 z-[100] w-full bg-white/70 backdrop-blur-xl border-b border-gray-100/50">

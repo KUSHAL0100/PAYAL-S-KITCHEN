@@ -779,7 +779,8 @@ const AdminDashboard = () => {
                                                             ${order.status === 'Confirmed' ? 'bg-green-100 text-green-800' :
                                                                 order.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
                                                                     order.status === 'Rejected' ? 'bg-orange-100 text-orange-800' :
-                                                                        'bg-yellow-100 text-yellow-800'}`}>
+                                                                        order.status === 'Upgraded' ? 'bg-blue-100 text-blue-800' :
+                                                                            'bg-yellow-100 text-yellow-800'}`}>
                                                             {order.status}
                                                         </span>
                                                     </div>
@@ -816,8 +817,7 @@ const AdminDashboard = () => {
                                                 </div>
                                                 <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded">
                                                     <p><strong>Items:</strong> {order.items.map(i => {
-                                                        const dateStr = i.deliveryDate ? ` (${new Date(i.deliveryDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}${i.deliveryTime ? ` @ ${i.deliveryTime}` : ''})` : '';
-                                                        return `${i.quantity}x ${i.name}${dateStr}`;
+                                                        return `${i.quantity}x ${i.name}`;
                                                     }).join(', ')}</p>
                                                     {/* Show menu items if available */}
                                                     {order.items.some(i => i.selectedItems) && (
@@ -854,6 +854,44 @@ const AdminDashboard = () => {
                                                                 </span>
                                                             </div>
                                                             {order.review.comment && <p className="text-xs text-gray-600 italic mt-1">"{order.review.comment}"</p>}
+                                                        </div>
+                                                    )}
+                                                    {/* Subscription Specific Details */}
+                                                    {order.type === 'subscription_purchase' && order.subscription && (
+                                                        <div className="mt-2 p-3 bg-purple-50 rounded-lg border border-purple-100 shadow-sm">
+                                                            <div className="flex justify-between items-center mb-1">
+                                                                <span className="text-xs font-black text-purple-700 uppercase tracking-widest">Subscription Purchased</span>
+                                                                <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded-full ${order.subscription.status === 'Active' ? 'bg-green-100 text-green-800' : order.subscription.status === 'Upgraded' ? 'bg-blue-100 text-blue-800' : 'bg-gray-200 text-gray-800'}`}>
+                                                                    {order.subscription.status}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-sm font-semibold text-gray-800 mt-1">
+                                                                Plan: {order.subscription.plan ? order.subscription.plan.name : 'Unknown'} ({order.subscription.plan?.duration || 'N/A'})
+                                                            </p>
+                                                            <p className="text-xs text-gray-600">
+                                                                Meal Type: <span className="capitalize font-medium">{order.subscription.mealType === 'both' ? 'Lunch + Dinner' : order.subscription.mealType}</span>
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                    {order.type === 'subscription_upgrade' && order.subscription && (
+                                                        <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-100 shadow-sm">
+                                                             <div className="flex justify-between items-center mb-1">
+                                                                <span className="text-xs font-black text-blue-700 uppercase tracking-widest">Subscription Upgradation</span>
+                                                                <span className="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                                                                    Upgraded To Plan
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-sm font-semibold text-gray-800 mt-1">
+                                                                Purchased Plan: {order.subscription.plan ? order.subscription.plan.name : 'Unknown'} ({order.subscription.plan?.duration || 'N/A'})
+                                                            </p>
+                                                            <p className="text-xs text-gray-600">
+                                                                Meal Type: <span className="capitalize font-medium">{order.subscription.mealType === 'both' ? 'Lunch + Dinner' : order.subscription.mealType}</span>
+                                                            </p>
+                                                            {(order.proRataCredit > 0 || order.proRataCredit === 0) && (
+                                                                <p className="text-xs font-medium text-green-700 mt-1">
+                                                                    Pro-Rata Credit Applied: ₹{order.proRataCredit || 0}
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>

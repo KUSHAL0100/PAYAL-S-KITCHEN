@@ -27,6 +27,10 @@ const findByUserId = async (userId) => {
 const findAll = async () => {
     return await Order.find({})
         .populate('user', 'id name')
+        .populate({
+            path: 'subscription',
+            populate: { path: 'plan', select: 'name duration' }
+        })
         .sort({ createdAt: -1 })
         .lean();
 };
